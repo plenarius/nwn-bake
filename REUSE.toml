@@ -1,0 +1,31 @@
+# REUSE (https://reuse.software/): who owns each file and under which licence (STYLE.md, "Licences and REUSE"). Source code says
+# it in its first two lines; this file covers everything that is not source code.
+#
+# nwn-bake is GPL-3.0-or-later; its binaries link Moonglow (GPL-3.0). Decompiled game code and other material taken from the game
+# never goes in this repository (STYLE.md, "Never in these repositories"): the tests write their own made-up game files.
+version = 1
+SPDX-PackageName = "nwn-bake"
+SPDX-PackageDownloadLocation = "https://github.com/plenarius/nwn-bake"
+
+[[annotations]]
+path = [
+    "**/*.md",
+    "**/*.toml",
+    "**/*.json",
+    "**/*.jsonl",
+    "**/*.yml",
+    "**/*.hbs",
+    "**/*.png",
+    "**/.gitignore",
+    ".lycheeignore",
+    ".editorconfig",
+    ".markdownlint.jsonc",
+    ".vale.ini",
+    ".vale/**",
+    "Cargo.lock",
+    # Shared word for word with repositories under other licences, so it carries no header.
+    "scripts/check.sh",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "Copyright (C) 2026 plenarius"
+SPDX-License-Identifier = "GPL-3.0-or-later"

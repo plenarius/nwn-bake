@@ -1,0 +1,8 @@
+# The passive voice (STYLE.md, Writing: active voice). A suggestion: sometimes the doer doesn't matter.
+extends: existence
+message: "'%s' may be passive: who does it?"
+level: suggestion
+ignorecase: true
+raw:
+  - \b(?:am|are|were|being|is|been|was|be)\b\s+
+  - (?:\w+ed|built|chosen|done|drawn|found|given|kept|known|left|made|put|read|run|seen|sent|set|shown|taken|thrown|written)\b

@@ -1,0 +1,539 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/plenarius/nwn-bake/main/docs/area-3d.schema.json",
+  "title": "nwn-bake area-3d manifest, version 2",
+  "description": "The manifest `nwn-bake area-3d` writes beside an area's .glb (<area>.json). See area-3d.md. Its shared fields (format, version, renderer, area, inputs, key, notes) are named and typed as in the area pictures' manifest (area-iso.schema.json). Fields not listed here may be added without a new version; readers ignore fields they do not know.",
+  "type": "object",
+  "required": [
+    "format",
+    "version",
+    "renderer",
+    "key",
+    "area",
+    "axes",
+    "glb",
+    "floor",
+    "tex_uri",
+    "textures",
+    "counts",
+    "bounds",
+    "doors",
+    "notes",
+    "inputs",
+    "options"
+  ],
+  "properties": {
+    "format": {
+      "const": "nwn-bake/area-3d"
+    },
+    "version": {
+      "const": 2
+    },
+    "renderer": {
+      "description": "The program that wrote it. version and commit are for information only; glb is the version of what a bake writes, part of the key.",
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "commit",
+        "glb"
+      ],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "glb": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "key": {
+      "description": "The batch's key (area-3d.md, Keys and the cache); null when the area was not baked by a batch.",
+      "oneOf": [
+        {
+          "$ref": "#/$defs/sha256"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "area": {
+      "type": "object",
+      "required": [
+        "resref",
+        "name",
+        "tileset",
+        "tiles",
+        "size_m",
+        "flags",
+        "kind",
+        "light"
+      ],
+      "properties": {
+        "resref": {
+          "$ref": "#/$defs/resref"
+        },
+        "name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tileset": {
+          "$ref": "#/$defs/resref"
+        },
+        "tiles": {
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "size_m": {
+          "description": "Metres along x and y: the tiles times 10 m.",
+          "type": "array",
+          "items": {
+            "type": "number",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "flags": {
+          "description": "The .are's Flags: 1 interior, 2 underground, 4 natural.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "kind": {
+          "enum": [
+            "surface",
+            "interior",
+            "underground"
+          ]
+        },
+        "light": {
+          "description": "The area's sun: SunAmbientColor and SunDiffuseColor, RGB.",
+          "type": "object",
+          "required": [
+            "ambient",
+            "diffuse"
+          ],
+          "properties": {
+            "ambient": {
+              "$ref": "#/$defs/rgb"
+            },
+            "diffuse": {
+              "$ref": "#/$defs/rgb"
+            }
+          }
+        }
+      }
+    },
+    "axes": {
+      "const": "y-up"
+    },
+    "glb": {
+      "type": "object",
+      "required": [
+        "file",
+        "bytes",
+        "sha256"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    },
+    "floor": {
+      "description": "The floor file beside the .glb (area-3d.md, The floor file).",
+      "type": "object",
+      "required": [
+        "file",
+        "bytes",
+        "sha256",
+        "version",
+        "spacing_m",
+        "per_tile",
+        "samples",
+        "unit_m",
+        "walkable",
+        "blocked"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "bytes": {
+          "type": "integer",
+          "minimum": 16
+        },
+        "sha256": {
+          "$ref": "#/$defs/sha256"
+        },
+        "version": {
+          "description": "The file's own version, as in its header.",
+          "const": 1
+        },
+        "spacing_m": {
+          "const": 0.625
+        },
+        "per_tile": {
+          "const": 16
+        },
+        "samples": {
+          "description": "Samples along x and y: the tiles times 16, and one more.",
+          "type": "array",
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "unit_m": {
+          "const": 0.01
+        },
+        "walkable": {
+          "description": "Samples that are walkable floor.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "blocked": {
+          "description": "Of those, the samples a placeable of the .git blocks.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "tex_uri": {
+      "description": "What the .glb puts before each texture's file name: a relative path or a URL.",
+      "type": "string"
+    },
+    "textures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "bytes",
+          "width",
+          "height",
+          "alpha"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{20}\\.webp$"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "width": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "height": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "alpha": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "counts": {
+      "type": "object",
+      "required": [
+        "tiles",
+        "placeables",
+        "doors",
+        "models",
+        "meshes",
+        "tile_nodes",
+        "triangles_stored",
+        "triangles_drawn",
+        "vertices",
+        "water_triangles",
+        "textures",
+        "textures_missing"
+      ],
+      "properties": {
+        "tiles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "placeables": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "doors": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "models": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "meshes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tile_nodes": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "triangles_stored": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "triangles_drawn": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "vertices": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "water_triangles": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "textures": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "textures_missing": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "bounds": {
+      "description": "What is drawn, water included, game metres: [[lowest x, y, z], [highest x, y, z]].",
+      "type": "array",
+      "items": {
+        "type": "array",
+        "items": {
+          "type": "number"
+        },
+        "minItems": 3,
+        "maxItems": 3
+      },
+      "minItems": 2,
+      "maxItems": 2
+    },
+    "doors": {
+      "description": "Every door of the .git, drawn or not, in its order.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "index",
+          "tag",
+          "resref",
+          "name",
+          "model",
+          "node",
+          "x",
+          "y",
+          "z",
+          "bearing",
+          "bearing_deg",
+          "front_deg",
+          "front",
+          "locked",
+          "linked_to"
+        ],
+        "properties": {
+          "index": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "tag": {
+            "type": "string"
+          },
+          "resref": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "model": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "node": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "x": {
+            "type": "number"
+          },
+          "y": {
+            "type": "number"
+          },
+          "z": {
+            "type": "number"
+          },
+          "bearing": {
+            "description": "Radians counter-clockwise from east, as the .git has it.",
+            "type": "number"
+          },
+          "bearing_deg": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 360
+          },
+          "front_deg": {
+            "description": "The direction the street side faces, degrees counter-clockwise from east.",
+            "type": "number"
+          },
+          "front": {
+            "description": "front_deg as a unit vector in the .glb's axes (Y up).",
+            "type": "array",
+            "items": {
+              "type": "number"
+            },
+            "minItems": 3,
+            "maxItems": 3
+          },
+          "locked": {
+            "type": "boolean"
+          },
+          "linked_to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "inputs": {
+      "type": "object",
+      "required": [
+        "are",
+        "git",
+        "haks",
+        "missing_haks",
+        "tlk"
+      ],
+      "properties": {
+        "are": {
+          "$ref": "#/$defs/sha256"
+        },
+        "git": {
+          "oneOf": [
+            {
+              "$ref": "#/$defs/sha256"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "haks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "missing_haks": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "tlk": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "options": {
+      "type": "object",
+      "required": [
+        "max_tex",
+        "webp_quality",
+        "objects"
+      ],
+      "properties": {
+        "max_tex": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "webp_quality": {
+          "description": "The textures' WebP quality, 0 to 100, as the area pictures' options.webp_quality.",
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "objects": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "resref": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{0,16}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "rgb": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 0,
+        "maximum": 255
+      },
+      "minItems": 3,
+      "maxItems": 3
+    }
+  }
+}

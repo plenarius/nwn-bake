@@ -1,0 +1,54 @@
+[package]
+name = "nwn-bake"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "Neverwinter Nights: Enhanced Edition areas, characters and models as pictures, glTF and plain data for the web"
+readme = "../README.md"
+
+[dependencies]
+mg-core = { workspace = true }
+mg-mdl = { workspace = true }
+mg-resman = { workspace = true }
+mg-rules = { workspace = true }
+mg-image = { workspace = true }
+anyhow = { workspace = true }
+glam = "0.30"
+png = { workspace = true }
+serde = { workspace = true }
+sha2 = { workspace = true }
+serde_json = { workspace = true }
+mg-gff = { workspace = true }
+mg-preview = { workspace = true, optional = true }
+mg-render = { workspace = true, optional = true }
+mg-tlk = { workspace = true }
+# Modules in every form (`.mod`, folder, nasher project with JSON GFF files) and tilesets.
+mg-module = { workspace = true }
+indexmap = "2"
+mg-set = { workspace = true }
+wgpu = { version = "30", optional = true }
+pollster = { version = "0.4", optional = true }
+# Lossy WebP for a baked scene's textures and the area pictures (libwebp, built from its bundled source).
+webp = { version = "0.3", default-features = false, optional = true }
+
+[dev-dependencies]
+mg-erf = { workspace = true }
+# Checks the manifests the tests write against docs/area-iso.schema.json (no network: schemas are not fetched).
+jsonschema = { workspace = true }
+# Reads back the WebP pictures the batch tests write.
+webp = { version = "0.3", default-features = false }
+
+[features]
+# Composed creatures (posed, skinned, coloured). Needs wgpu to load models, but only the CPU does the work: a software
+# adapter (Mesa lavapipe) is enough.
+creature = ["dep:mg-preview", "dep:mg-render", "dep:wgpu", "dep:pollster", "webp"]
+# WebP area pictures (`--format webp`, the CLI's default): libwebp, compiled from C.
+webp = ["dep:webp"]
+
+[lints]
+workspace = true

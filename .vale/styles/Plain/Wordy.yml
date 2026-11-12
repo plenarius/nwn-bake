@@ -1,0 +1,16 @@
+# Long ways of saying a short thing (STYLE.md, Writing).
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: true
+swap:
+  in order to: to
+  utili[sz](?:e|es|ed|ing): use
+  make use of: use
+  prior to: before
+  due to the fact that: because
+  in the event that: if
+  at this point in time: now
+  is able to: can
+  are able to: can
+  facilitate: help

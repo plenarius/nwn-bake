@@ -1,0 +1,7 @@
+# Links lychee skips in this repository only (lychee.toml is shared word for word with the other repositories).
+#
+# STYLE.md names the area editor's engine and web page, whose repositories are private until they are published, so their links
+# give 404 for now. Remove these lines once https://github.com/plenarius/landscaper and
+# https://github.com/plenarius/landscaper-web are public.
+^https://github.com/plenarius/landscaper(/|$)
+^https://github.com/plenarius/landscaper-web(/|$)

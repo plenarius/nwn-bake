@@ -1,0 +1,300 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/plenarius/nwn-bake/main/docs/scene.schema.json",
+  "title": "nwn-bake scene: a picture of several objects",
+  "description": "The spec `nwn-bake scene <spec.json> <out.png>` reads, and `serve`'s `scene` request carries (docs/scene.md). Coordinates are the game's: metres, x east, y north, z up. Unknown fields are an error.",
+  "type": "object",
+  "additionalProperties": false,
+  "anyOf": [
+    {
+      "required": [
+        "objects"
+      ],
+      "properties": {
+        "objects": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "lines"
+      ],
+      "properties": {
+        "lines": {
+          "minItems": 1
+        }
+      }
+    },
+    {
+      "required": [
+        "axes"
+      ],
+      "properties": {
+        "axes": {
+          "minItems": 1
+        }
+      }
+    }
+  ],
+  "properties": {
+    "width": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8192,
+      "default": 1024
+    },
+    "height": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8192,
+      "default": 768
+    },
+    "objects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/object"
+      }
+    },
+    "camera": {
+      "$ref": "#/$defs/camera"
+    },
+    "lines": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "from",
+          "to"
+        ],
+        "properties": {
+          "from": {
+            "$ref": "#/$defs/vec3"
+          },
+          "to": {
+            "$ref": "#/$defs/vec3"
+          },
+          "colour": {
+            "$ref": "#/$defs/colour",
+            "description": "White when left out."
+          }
+        }
+      }
+    },
+    "axes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "at"
+        ],
+        "properties": {
+          "at": {
+            "$ref": "#/$defs/vec3"
+          },
+          "length": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 1
+          }
+        }
+      }
+    },
+    "points": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/vec3"
+      },
+      "description": "Points whose pixel positions the answer gives."
+    },
+    "light": {
+      "description": "\"day\" (the default), or the sun's colours as an .are gives them and the direction towards it.",
+      "oneOf": [
+        {
+          "const": "day"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ambient": {
+              "$ref": "#/$defs/colour"
+            },
+            "diffuse": {
+              "$ref": "#/$defs/colour"
+            },
+            "toward": {
+              "$ref": "#/$defs/vec3"
+            }
+          }
+        }
+      ]
+    },
+    "shadows": {
+      "type": "boolean",
+      "default": false,
+      "description": "The sun's shadows, cast onto the placeables and models."
+    },
+    "background": {
+      "type": "string",
+      "pattern": "^(transparent|#?[0-9a-fA-F]{6})$",
+      "default": "#1a1c24"
+    }
+  },
+  "$defs": {
+    "vec3": {
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 3,
+      "maxItems": 3
+    },
+    "colour": {
+      "type": "string",
+      "pattern": "^#?([0-9a-fA-F]{6}|[0-9a-fA-F]{8})$"
+    },
+    "object": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "One thing in the scene. Exactly one of placeable, model, creature and item.",
+      "properties": {
+        "placeable": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "A row of placeables.2da."
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "description": "A model by resref, on its own."
+        },
+        "creature": {
+          "type": "string",
+          "description": "A creature blueprint (.utc, .utc.json) or character (.bic)."
+        },
+        "item": {
+          "type": "string",
+          "description": "An item blueprint (.uti, .uti.json)."
+        },
+        "position": {
+          "$ref": "#/$defs/vec3",
+          "default": [
+            0,
+            0,
+            0
+          ],
+          "description": "Its model's origin, metres: x east, y north, z up."
+        },
+        "facing": {
+          "type": "number",
+          "default": 270,
+          "description": "Degrees counter-clockwise from east, as GetFacing. A .git placeable's Bearing b (radians) is b in degrees plus 90."
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "default": 1
+        },
+        "textures": {
+          "type": "array",
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "minItems": 2,
+            "maxItems": 2
+          },
+          "description": "[old, new] texture names, as ReplaceObjectTexture."
+        },
+        "anim": {
+          "type": "string",
+          "description": "The animation: pause1 for a creature or item, the idle state (else default) for a placeable or model."
+        },
+        "t": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "Seconds into the animation."
+        }
+      },
+      "oneOf": [
+        {
+          "required": [
+            "placeable"
+          ]
+        },
+        {
+          "required": [
+            "model"
+          ]
+        },
+        {
+          "required": [
+            "creature"
+          ]
+        },
+        {
+          "required": [
+            "item"
+          ]
+        }
+      ]
+    },
+    "camera": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Left out, or any field left out: from the south, 30 degrees up, framed by what is drawn.",
+      "properties": {
+        "target": {
+          "$ref": "#/$defs/vec3",
+          "description": "The middle of the picture; the middle of what is drawn when left out."
+        },
+        "position": {
+          "$ref": "#/$defs/vec3",
+          "description": "Where the camera is. With target, yaw, pitch and distance are not used."
+        },
+        "yaw": {
+          "type": "number",
+          "default": -90,
+          "description": "The camera's side of the target, degrees counter-clockwise from east."
+        },
+        "pitch": {
+          "type": "number",
+          "minimum": -89.9,
+          "maximum": 89.9,
+          "default": 30
+        },
+        "distance": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Metres from the target; as near as shows everything when left out."
+        },
+        "fov": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "exclusiveMaximum": 180,
+          "default": 40
+        },
+        "orthographic": {
+          "type": "boolean",
+          "default": false
+        },
+        "scale": {
+          "type": "number",
+          "exclusiveMinimum": 0,
+          "description": "Orthographic only: pixels a metre; fitted when left out."
+        }
+      },
+      "dependentRequired": {
+        "scale": [
+          "orthographic"
+        ]
+      }
+    }
+  }
+}

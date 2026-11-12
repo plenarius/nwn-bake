@@ -1,0 +1,138 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/plenarius/nwn-bake/main/docs/area-iso-line.schema.json",
+  "title": "nwn-bake area pictures: a line of manifest.jsonl",
+  "description": "`nwn-bake area-iso --all` writes manifest.jsonl beside the pictures: one JSON object a line, one line per area and view, in resref and view order. A line is the area's manifest (area-iso.schema.json) without its views, plus that view's fields at the top (what a reader needs first) and its entry (view_entry). An area that failed and has no pictures has a line per view with status failed. Fields not listed here may be added.",
+  "type": "object",
+  "required": [
+    "resref",
+    "view",
+    "status"
+  ],
+  "properties": {
+    "resref": {
+      "type": "string",
+      "pattern": "^[a-z0-9_]{0,16}$"
+    },
+    "view": {
+      "enum": [
+        "sw",
+        "se",
+        "ne",
+        "nw",
+        "top"
+      ]
+    },
+    "status": {
+      "enum": [
+        "ok",
+        "failed"
+      ]
+    },
+    "error": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "version": {
+      "const": 1
+    }
+  },
+  "if": {
+    "properties": {
+      "status": {
+        "const": "ok"
+      }
+    }
+  },
+  "then": {
+    "required": [
+      "path",
+      "width",
+      "height",
+      "bytes",
+      "transform",
+      "format",
+      "version",
+      "renderer",
+      "area",
+      "inputs",
+      "resources",
+      "key",
+      "quick_key",
+      "options",
+      "roof_cut_m",
+      "notes",
+      "view_entry"
+    ],
+    "properties": {
+      "path": {
+        "description": "The picture, relative to the folder: <format>/<view>/<resref>.<format>.",
+        "type": "string",
+        "minLength": 1
+      },
+      "width": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "height": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "bytes": {
+        "type": [
+          "integer",
+          "null"
+        ],
+        "minimum": 0
+      },
+      "transform": {
+        "type": "object",
+        "required": [
+          "view",
+          "elevation_deg",
+          "scale",
+          "width",
+          "height",
+          "rotation",
+          "offset",
+          "matrix"
+        ],
+        "properties": {
+          "matrix": {
+            "type": "array",
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "number"
+              },
+              "minItems": 4,
+              "maxItems": 4
+            },
+            "minItems": 2,
+            "maxItems": 2
+          }
+        }
+      },
+      "format": {
+        "const": "nwn-bake/area-iso"
+      },
+      "view_entry": {
+        "type": "object",
+        "required": [
+          "view",
+          "file",
+          "width",
+          "height",
+          "matrix"
+        ]
+      }
+    }
+  },
+  "else": {
+    "required": [
+      "version"
+    ]
+  }
+}

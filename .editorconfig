@@ -1,0 +1,32 @@
+# Editor settings shared by every repository that follows STYLE.md. The formatters (rustfmt, Biome) have the last word; this
+# file only makes editors start out the same way.
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 4
+max_line_length = 140
+
+[*.{yml,yaml}]
+indent_size = 2
+
+[*.md]
+# A Markdown line break is a blank line or a new list item, never two trailing spaces.
+max_line_length = 140
+
+[{Makefile,*.mk}]
+indent_style = tab
+
+# Files that are not ours keep their own layout.
+[{vendor/**,LICENSES/**,LICENSE}]
+charset = unset
+end_of_line = unset
+insert_final_newline = unset
+trim_trailing_whitespace = unset
+indent_style = unset
+indent_size = unset
+max_line_length = unset

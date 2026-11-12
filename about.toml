@@ -1,0 +1,67 @@
+# cargo-about (the release's THIRD-PARTY-LICENSES.html): the licences the dependencies may be under.
+# Test-only crates are not shipped, so they are not listed (and their licences need not be accepted here; cargo-deny checks them).
+ignore-dev-dependencies = true
+# The platforms the releases are built for. Crates only other platforms use (Android, WebAssembly, Redox) are not in the
+# binaries, so they are not listed.
+targets = [
+    "x86_64-unknown-linux-gnu",
+    "x86_64-pc-windows-msvc",
+    "x86_64-apple-darwin",
+    "aarch64-apple-darwin",
+]
+accepted = [
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "bzip2-1.0.6",
+    "CC0-1.0",
+    "CDLA-Permissive-2.0",
+    "GPL-3.0-only",
+    "GPL-3.0-or-later",
+    "ISC",
+    "MIT",
+    "MPL-2.0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# C and C++ libraries that their crates build from bundled source and link into the binary. Their crates' metadata names only
+# the Rust bindings' licence, so cargo-about would leave out the libraries' own texts, which BSD-3-Clause asks to ship with a
+# binary. Each clarification names the bundled licence files; a new version of the crate fails the checksum and has to be
+# looked at again.
+
+# libwebp (WebP pictures and textures): BSD-3-Clause. Its patent grant (`vendor/PATENTS`) sets no condition on redistribution and
+# is not a licence text. cargo-about 0.9.3, given it as a second file, prints the first file's text in its place, so the
+# template of a workspace that links libwebp (`about.hbs`) writes it as a fixed section.
+[libwebp-sys.clarify]
+license = "MIT AND BSD-3-Clause"
+[[libwebp-sys.clarify.files]]
+path = "vendor/COPYING"
+license = "BSD-3-Clause"
+checksum = "5aec868f669e384a22372a4e8a1a6cd7d44c64cd451f960ca69cc170d1e13acf"
+
+# glslang (Moonglow's shader compiler): its LICENSE.txt holds every licence of its parts (BSD-3-Clause for the core, BSD-2-Clause,
+# MIT, Apache-2.0, NVIDIA's preprocessor licence, and the GPL-3.0 Bison exception of a parser it no longer uses). cargo-about
+# accepts the file only under the core's licence, so it is listed there, whole.
+[glslang-sys.clarify]
+license = "(MIT OR Apache-2.0) AND BSD-3-Clause"
+[[glslang-sys.clarify.files]]
+path = "native/glslang/LICENSE.txt"
+license = "BSD-3-Clause"
+checksum = "7d4c1655be3a4d99e8a4859335e28c8950f2e7f72dcf3eed3379846120f5bf47"
+
+# zstd (compressed hak and module entries): the bindings' and Meta's BSD-3-Clause texts. zstd itself is BSD-3-Clause or GPL-2.0;
+# the binaries use it under BSD-3-Clause.
+[zstd-sys.clarify]
+license = "BSD-3-Clause"
+[[zstd-sys.clarify.files]]
+path = "LICENSE"
+license = "BSD-3-Clause"
+checksum = "ce4868c8e4ebe47a7d4b3c93dbf6b802033e5ae2fa7638098173f80836daac60"
+[[zstd-sys.clarify.files]]
+path = "zstd/LICENSE"
+license = "BSD-3-Clause"
+checksum = "7055266497633c9025b777c78eb7235af13922117480ed5c674677adc381c9d8"

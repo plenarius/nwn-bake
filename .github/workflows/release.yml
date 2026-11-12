@@ -1,0 +1,154 @@
+name: Release
+
+# On a version tag (v0.2.0): builds nwn-bake for Linux (x86-64, in a Debian 12 container, so it runs on glibc 2.36 and newer),
+# Windows (x86-64) and macOS (one universal binary for Apple silicon and Intel), runs each on the made-up fixture, and publishes a
+# GitHub release with an archive per platform (the binary, LICENSE, README.md, MOONGLOW.md and the third-party licences),
+# SHA256SUMS and the complete source with every dependency vendored, as the GPL asks. Run by hand, it builds and tests the binaries
+# and publishes nothing.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  linux:
+    runs-on: ubuntu-latest
+    container: rust:1-bookworm
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Tools
+        run: |
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends cmake clang libclang-dev pkg-config git ca-certificates >/dev/null
+      - name: Build
+        env:
+          NWN_BAKE_COMMIT: ${{ github.sha }}
+        run: cargo build --release --locked -p nwn-bake-cli
+      - name: Smoke test on the fixture
+        run: scripts/smoke-test.sh "$PWD/target/release/nwn-bake"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bin-linux-x86_64
+          path: target/release/nwn-bake
+
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (stable)
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Build
+        env:
+          NWN_BAKE_COMMIT: ${{ github.sha }}
+        run: cargo build --release --locked -p nwn-bake-cli
+      - name: Smoke test on the fixture
+        shell: bash
+        run: scripts/smoke-test.sh "$PWD/target/release/nwn-bake.exe"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bin-windows-x86_64
+          path: target/release/nwn-bake.exe
+
+  macos:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (stable, both targets)
+        run: |
+          rustup toolchain install stable --profile minimal --target aarch64-apple-darwin --target x86_64-apple-darwin
+          rustup default stable
+      - name: Build
+        env:
+          NWN_BAKE_COMMIT: ${{ github.sha }}
+        run: |
+          cargo build --release --locked -p nwn-bake-cli --target aarch64-apple-darwin
+          cargo build --release --locked -p nwn-bake-cli --target x86_64-apple-darwin
+          mkdir -p universal
+          lipo -create -output universal/nwn-bake target/aarch64-apple-darwin/release/nwn-bake target/x86_64-apple-darwin/release/nwn-bake
+          lipo -info universal/nwn-bake
+      - name: Smoke test on the fixture
+        run: scripts/smoke-test.sh "$PWD/universal/nwn-bake"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: bin-macos-universal
+          path: universal/nwn-bake
+
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (stable)
+        run: rustup toolchain install stable --profile minimal && rustup default stable
+      - name: Third-party licences
+        run: |
+          cargo install --locked cargo-about --version 0.9.3 --features cli
+          # --fail: a crate whose licence cannot be shipped, or a clarification whose files changed (about.toml), stops the release.
+          cargo about generate --workspace --all-features --fail --locked -o THIRD-PARTY-LICENSES.html about.hbs
+      - name: Source with every dependency
+        run: |
+          set -eu
+          version=${GITHUB_REF_NAME#v}
+          name=nwn-bake-$version-source
+          mkdir -p "dist/$name/.cargo"
+          git archive HEAD | tar -x -C "dist/$name"
+          cp THIRD-PARTY-LICENSES.html "dist/$name/"
+          (cd "dist/$name" && cargo vendor --locked vendor > .cargo/config.toml)
+          tar -C dist -czf "$name.tar.gz" "$name"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: source
+          path: |
+            nwn-bake-*-source.tar.gz
+            THIRD-PARTY-LICENSES.html
+
+  publish:
+    needs: [linux, windows, macos, source]
+    # Only a version tag makes a release. A manual run (workflow_dispatch) builds and tests the binaries and stops here.
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          path: artifacts
+      - name: Archives and SHA256SUMS
+        run: |
+          set -eu
+          version=${GITHUB_REF_NAME#v}
+          mkdir dist
+          docs="LICENSE README.md MOONGLOW.md CHANGELOG.md artifacts/source/THIRD-PARTY-LICENSES.html"
+          pack() { # <platform> <binary> <zip|tar>
+            dir="nwn-bake-$version-$1"
+            mkdir "$dir"
+            cp "$2" "$dir/"
+            chmod +x "$dir/$(basename "$2")"
+            cp $docs "$dir/"
+            if [ "$3" = zip ]; then zip -qr "dist/$dir.zip" "$dir"; else tar -czf "dist/$dir.tar.gz" "$dir"; fi
+          }
+          pack linux-x86_64 artifacts/bin-linux-x86_64/nwn-bake tar
+          pack windows-x86_64 artifacts/bin-windows-x86_64/nwn-bake.exe zip
+          pack macos-universal artifacts/bin-macos-universal/nwn-bake tar
+          cp artifacts/source/nwn-bake-*-source.tar.gz dist/
+          (cd dist && sha256sum * > SHA256SUMS)
+          cat dist/SHA256SUMS
+      - uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
+        with:
+          draft: true
+          files: dist/*
+          body: |
+            The source is GPL-3.0-or-later. These binaries include Moonglow (GPL-3.0-only), so they are under GPL-3.0. The complete
+            source of the binaries, every dependency included, is `nwn-bake-*-source.tar.gz`. See CHANGELOG.md for what changed.
+            Needs a legally obtained Neverwinter Nights: Enhanced Edition install; ships none of its content.

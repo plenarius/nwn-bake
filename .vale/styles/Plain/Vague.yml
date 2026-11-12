@@ -1,0 +1,20 @@
+# An amount without the number (STYLE.md, Writing: concrete numbers over adjectives).
+extends: existence
+message: "'%s': can you give the number?"
+level: suggestion
+ignorecase: true
+tokens:
+  - many
+  - several
+  - various
+  - numerous
+  - a lot of
+  - lots of
+  - tons of
+  - huge(?:ly)?
+  - massive(?:ly)?
+  - significant(?:ly)?
+  - dramatic(?:ally)?
+  - extremely
+  - incredibly
+  - substantial(?:ly)?

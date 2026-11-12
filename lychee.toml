@@ -1,0 +1,20 @@
+# lychee: dead links in Markdown, HTML and comments. Shared by every repository that follows STYLE.md.
+# `scripts/check.sh` runs it offline (links between our own files); `scripts/check.sh --online` also checks the web.
+
+# Not ours, or not text.
+exclude_path = ['(^|/)target/', '(^|/)vendor/', '(^|/)node_modules/', '(^|/)LICENSES?(/|$)']
+
+# Addresses that only exist on the machine running the program, and the documentation's placeholders.
+exclude = [
+    '^https?://(127\.0\.0\.1|localhost|0\.0\.0\.0)([:/]|$)',
+    '^https?://([a-z0-9-]+\.)*example\.(com|org|net)([:/]|$)',
+]
+exclude_all_private = true
+
+# Links to a heading (`#section`) must find it.
+include_fragments = "anchor-only"
+
+accept = ["200..=299", "429"]
+max_retries = 2
+timeout = 20
+max_concurrency = 8

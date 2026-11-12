@@ -1,0 +1,19 @@
+// markdownlint (markdownlint-cli2): the Markdown rules of STYLE.md ("Markdown"). Shared by every repository that follows it.
+{
+    "default": true,
+    // Lines wrap at 140 columns, as the code does. Tables, code blocks and headings may run longer.
+    "MD013": { "line_length": 140, "code_blocks": false, "tables": false, "headings": false },
+    // Lists use "-"; emphasis and bold use "*".
+    "MD004": { "style": "dash" },
+    "MD049": { "style": "asterisk" },
+    "MD050": { "style": "asterisk" },
+    // Code is fenced with backticks, never indented.
+    "MD046": { "style": "fenced" },
+    "MD048": { "style": "backtick" },
+    // Two sections may share a heading ("Usage") if they are under different parents.
+    "MD024": { "siblings_only": true },
+    // How the pipes of a table are spaced is left to the writer.
+    "MD060": false,
+    // HTML only where Markdown has nothing for it.
+    "MD033": { "allowed_elements": ["br", "details", "summary", "kbd", "sub", "sup", "img", "picture", "source"] }
+}

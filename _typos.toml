@@ -1,0 +1,33 @@
+# typos (spelling in code, comments and docs). Shared by every repository that follows STYLE.md: add a word here, in the
+# right group, with the reason, and copy the file to the others.
+
+[files]
+extend-exclude = [
+    "vendor/",
+    "LICENSE",
+    "LICENSES/",
+    "*.lock",
+    "*.min.js",
+    "*.png", # binary; typos reads some compressed PNGs as text
+]
+
+[default]
+# Prose is British or Canadian English (colour, licence); code follows the API it calls (three.js `color`). Accept both.
+locale = "en"
+
+[default.extend-words]
+# The game's own field and file names.
+interruptable = "interruptable" # the GFF field `Interruptable`
+conver = "conver" # the GFF field `EndConverAbort`
+# Graphics terms.
+lod = "lod" # level of detail
+metalness = "metalness" # PBR materials (glTF, three.js)
+
+# Short names in the game's formulas and in notes on how the game behaves (`pn`: a path node).
+iy = "iy"
+pn = "pn"
+ba = "ba"
+
+[default.extend-identifiers]
+# A plural of an acronym, which typos would split as `PN` + `Gs`.
+PNGs = "PNGs"

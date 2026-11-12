@@ -1,0 +1,4 @@
+# rustfmt, shared by every Rust workspace that follows STYLE.md. The code is written wide; comments are wrapped by hand at
+# about 135 columns. Stable options only, so `cargo fmt` needs no nightly toolchain.
+max_width = 140
+use_small_heuristics = "Max"

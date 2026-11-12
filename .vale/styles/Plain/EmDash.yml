@@ -1,0 +1,7 @@
+# No em dashes, and so no chains of them (STYLE.md, Writing).
+extends: existence
+message: "Use a colon, a semicolon, commas or a new sentence instead of an em dash."
+level: error
+nonword: true
+tokens:
+  - '—'

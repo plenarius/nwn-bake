@@ -1,0 +1,38 @@
+{
+  "module": "nwm/XP1-Chapter 1.nwm",
+  "area": "q1rural",
+  "counts": {
+    "tiles": 256,
+    "placeables": 208,
+    "doors": 12,
+    "models": 125,
+    "meshes": 125,
+    "tile_nodes": 84,
+    "triangles_stored": 25649,
+    "triangles_drawn": 78980,
+    "vertices": 26985,
+    "water_triangles": 156,
+    "textures": 70,
+    "textures_missing": 0
+  },
+  "doors_drawn": 12,
+  "door_tags": [
+    "q1foot_cave_ext",
+    "q1hurst_door_ext",
+    "q1foot_stream3",
+    "q1foot_stream4",
+    "RuralExit",
+    "RuralExit_ToNether",
+    "q2crypt_door_ext",
+    "q1rural_at_rd_highf",
+    "RuralExit",
+    "RuralExit",
+    "RuralExit",
+    "RuralExit"
+  ],
+  "tileset": "tts01",
+  "tiles": [
+    16,
+    16
+  ]
+}

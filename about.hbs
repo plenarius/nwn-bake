@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>nwn-bake: third-party licences</title>
+<style>
+body { font-family: sans-serif; max-width: 60em; margin: 2em auto; padding: 0 1em; }
+pre { white-space: pre-wrap; background: #f4f4f4; padding: 1em; }
+li { margin: 0.2em 0; }
+</style>
+</head>
+<body>
+<h1>Third-party licences</h1>
+<p>nwn-bake includes the following crates. Each licence below lists the crates it applies to.</p>
+<h2>Overview</h2>
+<ul>
+{{#each overview}}
+<li>{{name}}, {{count}} crates:{{#each indices}} <a href="#licence-{{this}}">#{{this}}</a>{{/each}}</li>
+{{/each}}
+</ul>
+<h2>Licences</h2>
+{{#each licenses}}
+<h3 id="licence-{{@index}}">#{{@index}} {{name}}</h3>
+<p>Used by:</p>
+<ul>
+{{#each used_by}}
+<li><a href="{{#if crate.repository}}{{crate.repository}}{{else}}https://crates.io/crates/{{crate.name}}{{/if}}">{{crate.name}} {{crate.version}}</a></li>
+{{/each}}
+</ul>
+<pre>{{text}}</pre>
+{{/each}}
+<h2 id="libwebp-patents">libwebp: additional IP rights grant (patents)</h2>
+<p>libwebp, which the libwebp-sys crate builds from its bundled source and links into nwn-bake (WebP pictures and textures), comes
+with this patent grant from Google beside its BSD-3-Clause licence (<code>vendor/PATENTS</code> in libwebp-sys 0.9.6). cargo-about
+cannot list it with the licence, so it is written here as it is.</p>
+<pre>Additional IP Rights Grant (Patents)
+------------------------------------
+
+"These implementations" means the copyrightable works that implement the WebM
+codecs distributed by Google as part of the WebM Project.
+
+Google hereby grants to you a perpetual, worldwide, non-exclusive, no-charge,
+royalty-free, irrevocable (except as stated in this section) patent license to
+make, have made, use, offer to sell, sell, import, transfer, and otherwise
+run, modify and propagate the contents of these implementations of WebM, where
+such license applies only to those patent claims, both currently owned by
+Google and acquired in the future, licensable by Google that are necessarily
+infringed by these implementations of WebM. This grant does not include claims
+that would be infringed only as a consequence of further modification of these
+implementations. If you or your agent or exclusive licensee institute or order
+or agree to the institution of patent litigation or any other patent
+enforcement activity against any entity (including a cross-claim or
+counterclaim in a lawsuit) alleging that any of these implementations of WebM
+or any code incorporated within any of these implementations of WebM
+constitute direct or contributory patent infringement, or inducement of
+patent infringement, then any patent rights granted to you under this License
+for these implementations of WebM shall terminate as of the date such
+litigation is filed.</pre>
+</body>
+</html>

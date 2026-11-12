@@ -1,0 +1,82 @@
+# nwn-bake: the library (`nwn-bake/`) and the `nwn-bake` command (`nwn-bake-cli/`).
+[workspace]
+members = ["nwn-bake", "nwn-bake-cli"]
+resolver = "3"
+
+[workspace.package]
+version = "0.2.0"
+edition = "2024"
+license = "GPL-3.0-or-later"
+repository = "https://github.com/plenarius/nwn-bake"
+keywords = ["neverwinter-nights", "nwn", "gltf", "game-assets", "renderer"]
+categories = ["game-development", "rendering", "command-line-utilities"]
+# Moonglow's own minimum (MOONGLOW.md).
+rust-version = "1.98"
+# Not for crates.io: Moonglow is a git dependency, which crates.io does not accept. It also tells cargo-deny that the git
+# dependencies' missing versions are not wildcards.
+publish = false
+
+# The lint set shared by every Rust workspace that follows STYLE.md ("Lints"): the same block is in each workspace's Cargo.toml,
+# so change them together. CI runs `cargo clippy --workspace --all-targets --locked -- -D warnings`. Clippy's default set stays on.
+[workspace.lints.rust]
+unsafe_code = "forbid"
+rust_2018_idioms = { level = "warn", priority = -1 }
+unused_qualifications = "warn"
+# nwn-bake only (a library others build on): every public item has a doc comment.
+missing_docs = "deny"
+
+[workspace.lints.clippy]
+# Never in a commit.
+dbg_macro = "warn"
+todo = "warn"
+unimplemented = "warn"
+# Every `#[allow]` or `#[expect]` says why: `reason = "..."`.
+allow_attributes_without_reason = "warn"
+# Modules are `foo.rs` plus `foo/`, never `foo/mod.rs`.
+mod_module_files = "warn"
+# Two of clippy's style lints this code does not follow: its drawing and baking functions take their parts as arguments, and
+# some of its caches have long types.
+too_many_arguments = "allow"
+type_complexity = "allow"
+# From clippy's pedantic group: few hits, `cargo clippy --fix` or a small edit clears them, and they catch real mistakes. Game
+# files are often upper case (`.MDL`), so an extension is compared without regard to case.
+case_sensitive_file_extension_comparisons = "warn"
+cast_lossless = "warn"
+cloned_instead_of_copied = "warn"
+explicit_iter_loop = "warn"
+ignored_unit_patterns = "warn"
+implicit_clone = "warn"
+manual_let_else = "warn"
+map_unwrap_or = "warn"
+redundant_closure_for_method_calls = "warn"
+semicolon_if_nothing_returned = "warn"
+stable_sort_primitive = "warn"
+uninlined_format_args = "warn"
+
+[workspace.dependencies]
+# Used by both crates (STYLE.md: declared once). png stays at 0.17 while Moonglow's mg-image uses 0.18, so both are built; moving
+# to 0.18 changes the code that writes the pictures, which is a change of its own.
+anyhow = "1"
+jsonschema = { version = "0.61", default-features = false }
+png = "0.17"
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1"
+sha2 = "0.10"
+# Moonglow, pinned to one commit for every crate (MOONGLOW.md says how to move it).
+mg-core = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-erf = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-gff = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-image = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-mdl = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-module = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-preview = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-render = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-resman = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-rules = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-set = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+mg-tlk = { git = "https://github.com/jadzziaa/moonglow-toolset", rev = "ac17ade3292c9e9a81ac72efbd75411899cf4583" }
+
+# The area renderer fills millions of pixels a picture: unoptimised, its tests take minutes. nwn-bake is optimised in debug and test
+# builds too.
+[profile.dev.package.nwn-bake]
+opt-level = 3

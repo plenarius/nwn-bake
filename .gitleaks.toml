@@ -1,0 +1,9 @@
+# gitleaks' own rules, without the build output: `scripts/check.sh` scans the tree after `cargo doc`, and rustdoc's search
+# index (`target/doc/search.index/`) is base64 that can look like a key (a Square token, on 2026-11-12). Every commit is
+# still scanned in full.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "build output (git ignores target/)"
+paths = ['''(^|/)target/''']

@@ -1,0 +1,13 @@
+# One term for one thing (STYLE.md, Writing). Add a term when two spellings turn up.
+extends: substitution
+message: "Use '%s' instead of '%s'."
+level: error
+ignorecase: false
+swap:
+  '[Tt]ile[- ]set': tileset
+  '[Ww]alk[- ]mesh': walkmesh
+  '[Hh]ak ?[Pp]ak': hak
+  '[Tt]alk-?table': talk table
+  Github: GitHub
+  '[Jj]avascript': JavaScript
+  Wavefront OBJ: OBJ

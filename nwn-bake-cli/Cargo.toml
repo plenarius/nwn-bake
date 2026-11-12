@@ -1,0 +1,41 @@
+[package]
+name = "nwn-bake-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+keywords.workspace = true
+categories.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+description = "The nwn-bake command: area pictures, areas in glTF, characters as parts and pictures from Neverwinter Nights: Enhanced Edition"
+readme = "../README.md"
+
+[[bin]]
+name = "nwn-bake"
+path = "src/main.rs"
+# The library is `nwn-bake` too, and `cargo doc` would write both to one folder. The usage is at the top of `src/main.rs`.
+doc = false
+
+[dependencies]
+nwn-bake = { path = "../nwn-bake", features = ["creature", "webp"] }
+anyhow = { workspace = true }
+# The command line: --help and --version, a usage text per command, and errors (exit code 2) for misuse before the game is opened.
+# Without colour (and the crates it needs).
+clap = { version = "4.6", default-features = false, features = ["std", "help", "usage", "error-context", "suggestions", "derive"] }
+serde = { workspace = true }
+serde_json = { workspace = true }
+mg-core = { workspace = true }
+
+# The end-to-end tests: the fixture (`nwn-bake/tests/support/fixture.rs`) is written with Moonglow's writers, the PNGs read back, and
+# the manifests checked against `docs/area-iso.schema.json`.
+[dev-dependencies]
+mg-erf = { workspace = true }
+mg-gff = { workspace = true }
+mg-tlk = { workspace = true }
+png = { workspace = true }
+sha2 = { workspace = true }
+jsonschema = { workspace = true }
+
+[lints]
+workspace = true

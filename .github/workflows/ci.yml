@@ -1,0 +1,108 @@
+name: CI
+
+# Every check of STYLE.md (scripts/check.sh: formatting, clippy, rustdoc, cargo-machete, cargo-deny, cargo-about, spelling, writing,
+# Markdown, links, REUSE and the secret scans), a build on the minimum Rust version (rust-version in Cargo.toml), and the tests on
+# Linux, Windows and macOS. The tests need no Neverwinter Nights install: they write a small made-up game world of their own. The
+# golden tests on a real install run only when NWN_BAKE_GAME names one, which CI never sets. GitHub-hosted runners only.
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  schedule:
+    - cron: "23 5 * * 1" # Mondays: scripts/check.sh --online also checks the web links
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: "0"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0 # gitleaks and trufflehog read every commit
+      - name: Rust (stable)
+        run: rustup toolchain install stable --profile minimal --component rustfmt,clippy && rustup default stable && rustc --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      - name: Install the pinned tools (STYLE.md, "The checks")
+        run: |
+          set -euo pipefail
+          bin="$HOME/.local/bin"; mkdir -p "$bin"; echo "$bin" >> "$GITHUB_PATH"
+          cd "$RUNNER_TEMP"
+          get() { curl -fsSL -o "$2" "$1"; }
+          get https://github.com/EmbarkStudios/cargo-deny/releases/download/0.20.2/cargo-deny-0.20.2-x86_64-unknown-linux-musl.tar.gz cargo-deny.tgz
+          get https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-x86_64-unknown-linux-musl.tar.gz cargo-about.tgz
+          get https://github.com/bnjbvr/cargo-machete/releases/download/v0.9.2/cargo-machete-v0.9.2-x86_64-unknown-linux-musl.tar.gz cargo-machete.tgz
+          get https://github.com/crate-ci/typos/releases/download/v1.52.0/typos-v1.52.0-x86_64-unknown-linux-musl.tar.gz typos.tgz
+          get https://github.com/errata-ai/vale/releases/download/v3.26.0/vale_3.26.0_Linux_64-bit.tar.gz vale.tgz
+          get https://github.com/errata-ai/vale/releases/download/v3.26.0/vale_3.26.0_checksums.txt vale.sums
+          get https://github.com/lycheeverse/lychee/releases/download/lychee-v0.24.2/lychee-x86_64-unknown-linux-gnu.tar.gz lychee.tgz
+          get https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_linux_x64.tar.gz gitleaks.tgz
+          get https://github.com/gitleaks/gitleaks/releases/download/v8.30.1/gitleaks_8.30.1_checksums.txt gitleaks.sums
+          get https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.8/trufflehog_3.99.8_linux_amd64.tar.gz trufflehog.tgz
+          get https://github.com/trufflesecurity/trufflehog/releases/download/v3.99.8/trufflehog_3.99.8_checksums.txt trufflehog.sums
+          # The digests GitHub shows for each release asset, where the project publishes no checksum file of its own.
+          echo "9f12ed4c49936e09b48bf862b595cde2fe64fcbd9d74dfacac6131ca824c8d5f  cargo-deny.tgz" | sha256sum -c
+          echo "3ad1e94ea1e63d69d1961f4fb15ccbbe9575d906111f96d2cb4dce6df48f71b4  cargo-about.tgz" | sha256sum -c
+          echo "48200087f54c55aabcd4db4af1e25742b49846c02a1b1bfa134711945b35b2e9  cargo-machete.tgz" | sha256sum -c
+          echo "6155d4114f9a0f5b8f6d4fda96266c9d5f6add71df80da7f684ee5e72eb14588  typos.tgz" | sha256sum -c
+          echo "1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a  lychee.tgz" | sha256sum -c
+          grep vale_3.26.0_Linux_64-bit.tar.gz vale.sums | sed 's/  .*/  vale.tgz/' | sha256sum -c
+          grep gitleaks_8.30.1_linux_x64.tar.gz gitleaks.sums | sed 's/  .*/  gitleaks.tgz/' | sha256sum -c
+          grep trufflehog_3.99.8_linux_amd64.tar.gz trufflehog.sums | sed 's/  .*/  trufflehog.tgz/' | sha256sum -c
+          # Some archives keep the binary in a subfolder, so unpack each on its own and install the file named like the tool.
+          for t in cargo-deny cargo-about cargo-machete typos vale lychee gitleaks trufflehog; do
+            mkdir "x-$t" && tar -xzf "$t.tgz" -C "x-$t"
+            install -m 755 "$(find "x-$t" -type f -name "$t" | head -n 1)" "$bin/$t"
+          done
+          npm install -g --prefix "$HOME/.local" markdownlint-cli2@0.24.0
+          pipx install reuse==6.3.0
+      - name: scripts/check.sh
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT: ${{ github.event_name }}
+        run: scripts/check.sh $([ "$EVENT" = schedule ] && echo --online)
+
+  msrv:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (the rust-version in Cargo.toml)
+        run: |
+          msrv=$(sed -n 's/^rust-version = "\(.*\)"/\1/p' Cargo.toml)
+          rustup toolchain install "$msrv" --profile minimal && rustup default "$msrv" && rustc --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Build everything, tests included
+        run: cargo check --workspace --all-targets --all-features --locked
+
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Rust (stable)
+        run: rustup toolchain install stable --profile minimal && rustup default stable && rustc --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: Build
+        run: cargo test --workspace --locked --no-run
+      - name: Test
+        run: cargo test --workspace --locked --no-fail-fast

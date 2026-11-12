@@ -1,0 +1,1997 @@
+{
+  "build": "r1284",
+  "creatures": {
+    "nw_halffnd001": {
+      "anim": "pause1",
+      "t": 0.0,
+      "base": {
+        "colors": null,
+        "model": "pmo0",
+        "attach": null,
+        "scale": 1.0,
+        "textures": {},
+        "env_map": null,
+        "animated": false,
+        "colored": false
+      },
+      "parts": [
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_footr004",
+          "attach": "rfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_footr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_footl004",
+          "attach": "lfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_footl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_shinr008",
+          "attach": "rshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinl006": "pmh0_shinr008"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_shinl008",
+          "attach": "lshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinl006": "pmh0_shinl008"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_legl004",
+          "attach": "lthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_legl003": "pmh0_legl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_legr004",
+          "attach": "rthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_legl003": "pmh0_legr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_pelvis008",
+          "attach": "pelvis_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_chest029",
+          "attach": "torso_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_belt007",
+          "attach": "belt_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_neck001",
+          "attach": "neck_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_forer004",
+          "attach": "rforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_forel004": "pmh0_forer004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_forel004",
+          "attach": "lforearm_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_bicepr004",
+          "attach": "rbicep_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl004": "pmh0_bicepr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_bicepl004",
+          "attach": "lbicep_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_shor007",
+          "attach": "rshoulder_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol008": "pmh0_shor007"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_shol007",
+          "attach": "lshoulder_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol008": "pmh0_shol007"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_handr004",
+          "attach": "rhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_handl004",
+          "attach": "lhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            24,
+            23,
+            37,
+            23,
+            37,
+            23,
+            1,
+            1
+          ],
+          "model": "pmo0_head012",
+          "attach": "head_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1
+          ],
+          "model": "c_wingsdm",
+          "attach": "wings",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": true,
+          "colored": true
+        },
+        {
+          "colors": [
+            30,
+            53,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1
+          ],
+          "model": "c_taildevil",
+          "attach": "tail",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": true,
+          "colored": true
+        },
+        {
+          "colors": null,
+          "model": "waxgr_b_023",
+          "attach": "rhand",
+          "scale": 1.2999999523162842,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "waxgr_m_042",
+          "attach": "rhand",
+          "scale": 1.2999999523162842,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "waxgr_t_013",
+          "attach": "rhand",
+          "scale": 1.2999999523162842,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        }
+      ],
+      "missing_items": []
+    },
+    "nw_tiefling02": {
+      "anim": "pause1",
+      "t": 0.0,
+      "base": {
+        "colors": null,
+        "model": "pfh0",
+        "attach": null,
+        "scale": 1.0,
+        "textures": {},
+        "env_map": null,
+        "animated": false,
+        "colored": false
+      },
+      "parts": [
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_footr004",
+          "attach": "rfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_footl004": "pfh0_footr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_footl004",
+          "attach": "lfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_footl004": "pfh0_footl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_shinr008",
+          "attach": "rshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinl008": "pfh0_shinr008"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_shinl008",
+          "attach": "lshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinl008": "pfh0_shinl008"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_legl004",
+          "attach": "lthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_legl003": "pfh0_legl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_legr004",
+          "attach": "rthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_legl003": "pfh0_legr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_pelvis008",
+          "attach": "pelvis_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_chest043",
+          "attach": "torso_g",
+          "scale": 1.0,
+          "textures": {
+            "pfh0_chest020": "pfh0_chest043"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_belt007",
+          "attach": "belt_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_belt007": "pfh0_belt007"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_neck001",
+          "attach": "neck_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_forer004",
+          "attach": "rforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pfh0_forel004": "pfh0_forer004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_forel004",
+          "attach": "lforearm_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_bicepr004",
+          "attach": "rbicep_g",
+          "scale": 1.0,
+          "textures": {
+            "pfh0_bicepl004": "pfh0_bicepr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_bicepl004",
+          "attach": "lbicep_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_shor007",
+          "attach": "rshoulder_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol007": "pfh0_shor007"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_shol007",
+          "attach": "lshoulder_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol007": "pfh0_shol007"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_handr004",
+          "attach": "rhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pfh0_handr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_handl004",
+          "attach": "lhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pfh0_handl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            8,
+            19,
+            16,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pfh0_head141",
+          "attach": "head_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            3,
+            23,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1
+          ],
+          "model": "c_taildevil",
+          "attach": "tail",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": true,
+          "colored": true
+        },
+        {
+          "colors": null,
+          "model": "wswrp_b_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "wswrp_m_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "wswrp_t_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "ashsw_011",
+          "attach": "lforearm",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        }
+      ],
+      "missing_items": []
+    },
+    "x2_mephdrow006": {
+      "anim": "pause1",
+      "t": 0.0,
+      "base": {
+        "colors": null,
+        "model": "pme0",
+        "attach": null,
+        "scale": 1.0,
+        "textures": {},
+        "env_map": null,
+        "animated": false,
+        "colored": false
+      },
+      "parts": [
+        {
+          "colors": [
+            29,
+            16,
+            0,
+            0,
+            166,
+            167,
+            99,
+            167,
+            1,
+            1
+          ],
+          "model": "pme0_cloak_005",
+          "attach": null,
+          "scale": 1.0,
+          "textures": {
+            "pme0_cloak_005": "cloak_005"
+          },
+          "env_map": "default",
+          "animated": true,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_footr005",
+          "attach": "rfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_footl005": "pmh0_footr005"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_footl005",
+          "attach": "lfoot_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_shinr012",
+          "attach": "rshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinl012": "pmh0_shinr012"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_shinl012",
+          "attach": "lshin_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_legl012",
+          "attach": "lthigh_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_legr012",
+          "attach": "rthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol017": "pmh0_legr012"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_pelvis006",
+          "attach": "pelvis_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_chest026",
+          "attach": "torso_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_chest021": "pmh0_chest026"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_belt016",
+          "attach": "belt_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_belt002": "pmh0_belt016"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_neck001",
+          "attach": "neck_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_forer018",
+          "attach": "rforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_forer017": "pmh0_forer018"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_forel018",
+          "attach": "lforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_forer017": "pmh0_forel018"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_bicepr006",
+          "attach": "rbicep_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl006": "pmh0_bicepr006"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_bicepl006",
+          "attach": "lbicep_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_handr004",
+          "attach": "rhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            23,
+            37,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "pme0_handl004",
+          "attach": "lhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            29,
+            16,
+            3,
+            25,
+            37,
+            23,
+            23,
+            37,
+            1,
+            1
+          ],
+          "model": "helm_024",
+          "attach": "head_g",
+          "scale": 0.8500000238418579,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": null,
+          "model": "wswls_b_024",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "wswls_m_034",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "wswls_t_054",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "ashlw_033",
+          "attach": "lforearm",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        }
+      ],
+      "missing_items": []
+    },
+    "x3_dwarfmount001": {
+      "anim": "pause1",
+      "t": 0.0,
+      "base": {
+        "colors": null,
+        "model": "pmd3",
+        "attach": null,
+        "scale": 1.0,
+        "textures": {},
+        "env_map": null,
+        "animated": false,
+        "colored": false
+      },
+      "parts": [
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_footr004",
+          "attach": "rfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_footr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_footl004",
+          "attach": "lfoot_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_footl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_shinr009",
+          "attach": "rshin_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_shinl009",
+          "attach": "lshin_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shinr009": "pmh0_shinl009"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_legl008",
+          "attach": "lthigh_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_legr008",
+          "attach": "rthigh_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_legl008": "pmh0_legr008"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_pelvis003",
+          "attach": "pelvis_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_chest028",
+          "attach": "torso_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_belt011",
+          "attach": "belt_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_belt009": "pmh0_belt011"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_neck001",
+          "attach": "neck_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_forer010",
+          "attach": "rforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_forel011": "pmh0_forer010"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_forel010",
+          "attach": "lforearm_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_forel011": "pmh0_forel010"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_bicepr010",
+          "attach": "rbicep_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_bicepr010"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_bicepl010",
+          "attach": "lbicep_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_bicepl011": "pmh0_bicepl010"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_shor016",
+          "attach": "rshoulder_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_shol016": "pmh0_shor016"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_shol016",
+          "attach": "lshoulder_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_handr004",
+          "attach": "rhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handr004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_handl004",
+          "attach": "lhand_g",
+          "scale": 1.0,
+          "textures": {
+            "pmh0_handl005": "pmh0_handl004"
+          },
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            8,
+            11,
+            8,
+            1,
+            7,
+            1,
+            1
+          ],
+          "model": "pmd0_head001",
+          "attach": "head_g",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "default",
+          "animated": false,
+          "colored": true
+        },
+        {
+          "colors": [
+            1,
+            1,
+            0,
+            0,
+            0,
+            0,
+            0,
+            0,
+            1,
+            1
+          ],
+          "model": "c_horse3a",
+          "attach": "tail",
+          "scale": 0.8199999928474426,
+          "textures": {},
+          "env_map": "default",
+          "animated": true,
+          "colored": true
+        },
+        {
+          "colors": null,
+          "model": "waxbt_b_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "waxbt_m_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        },
+        {
+          "colors": null,
+          "model": "waxbt_t_011",
+          "attach": "rhand",
+          "scale": 1.0,
+          "textures": {},
+          "env_map": "chrome1",
+          "animated": false,
+          "colored": false
+        }
+      ],
+      "missing_items": []
+    },
+    "nw_drgred001": {
+      "anim": "pause1",
+      "t": 0.0,
+      "base": {
+        "colors": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "model": "c_drgred",
+        "attach": null,
+        "scale": 1.0,
+        "textures": {},
+        "env_map": null,
+        "animated": false,
+        "colored": true
+      },
+      "parts": [],
+      "missing_items": []
+    }
+  }
+}

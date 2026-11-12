@@ -1,0 +1,7 @@
+# Short sentences (STYLE.md, Writing). 35 words is long enough for one idea.
+extends: occurrence
+message: "This sentence has more than 35 words: split it?"
+level: suggestion
+scope: sentence
+max: 35
+token: \b\w+\b

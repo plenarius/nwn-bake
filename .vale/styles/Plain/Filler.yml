@@ -1,0 +1,29 @@
+# Words that add nothing, or that sell instead of saying what happens (STYLE.md, Writing).
+extends: existence
+message: "Drop '%s': say what happens, or give the number."
+level: error
+ignorecase: true
+tokens:
+  - seamless(?:ly)?
+  - robust(?:ly|ness)?
+  - leverag(?:e|es|ed|ing)
+  - simply
+  - just
+  - very
+  - really
+  - basically
+  - actually
+  - obviously
+  - easily
+  - effortless(?:ly)?
+  - powerful
+  - cutting[- ]edge
+  - state[- ]of[- ]the[- ]art
+  - best[- ]in[- ]class
+  - world[- ]class
+  - blazing(?:ly)?
+  - game[- ]chang(?:er|ing)
+  - revolutionary
+  - innovative
+  - needless to say
+  - of course
