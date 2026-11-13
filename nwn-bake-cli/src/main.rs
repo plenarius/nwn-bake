@@ -8,7 +8,8 @@
 //!
 //! - **The game:** `--root` (else `NWN_ROOT`, then the usual places) and the user folder, `--user`, else `NWN_BAKE_USER`, else
 //!   `NWN_HOME` (else the game's own rule), resolved in one place, [`GameArgs::user`]. The custom talk table is `--tlk`, else
-//!   `NWN_BAKE_TLK`, else the module's.
+//!   `NWN_BAKE_TLK`, else the module's. The caches' limit is `--cache-mb`, else `NWN_BAKE_CACHE_MB`, else the default, one budget
+//!   for every game the command opens ([`GameArgs::budget`]).
 //! - **Areas:** `<module> <area>...`, `<module> --all`, or one area file on its own ([`AreaArgs`]), the same for `area-iso`,
 //!   `area-3d` and `area-scene`.
 //! - **Exit codes:** 0 when all went well; 1 on an error; 2 on misuse (an unknown command or option, a value that does not parse),
@@ -20,7 +21,7 @@ use std::time::Instant;
 
 use anyhow::{Context, Result, bail};
 use clap::{Args, CommandFactory, FromArgMatches, Parser, Subcommand};
-use nwn_bake::game::{Game, GameOptions, Haks, Tlk};
+use nwn_bake::game::{CacheBudget, CacheLimits, Game, GameOptions, Haks, Tlk};
 use nwn_bake::look;
 
 /// `eprintln!` that drops the line when stderr cannot be written ([`warn`]).
@@ -44,7 +45,7 @@ const EXIT_AREA_FAILED: i32 = 3;
     disable_help_subcommand = true,
     after_help = "Run `nwn-bake <COMMAND> --help` for a command's arguments and options.\n\n\
                   Environment: NWN_ROOT (the install), NWN_BAKE_USER and then NWN_HOME (the user folder), NWN_BAKE_TLK (the talk \
-                  table), NWN_BAKE_JOBS (threads for a batch), NWN_BAKE_SOFTWARE=1 (no GPU: Mesa lavapipe).\n\
+                  table), NWN_BAKE_JOBS (threads for a batch), NWN_BAKE_CACHE_MB (the caches' limit), NWN_BAKE_SOFTWARE=1 (no GPU: Mesa lavapipe).\n\
                   Exit codes: 0 done, 1 an error, 2 misuse, 3 a batch in which an area failed."
 )]
 struct Cli {
@@ -61,6 +62,11 @@ struct GameArgs {
     /// The user folder (hak/, tlk/, override/) [default: NWN_BAKE_USER, then NWN_HOME, then the game's own]
     #[arg(long, value_name = "DIR")]
     user: Option<PathBuf>,
+    /// How much the model and texture caches may keep between uses, in MiB, for the whole process (a quarter for models, the rest
+    /// for textures; what is being drawn is not counted). 0 keeps as little as can be. Never changes a picture or a key
+    /// [default: NWN_BAKE_CACHE_MB, then 4096]
+    #[arg(long, value_name = "MB", value_parser = parse_cache_mb)]
+    cache_mb: Option<CacheLimits>,
 }
 
 /// A non-empty environment variable.
@@ -80,6 +86,22 @@ impl GameArgs {
         };
         anyhow::ensure!(path.is_dir(), "{}: no such folder (the user folder, from {from})", path.display());
         Ok(Some(path))
+    }
+
+    /// The caches' limits: `--cache-mb`, else `NWN_BAKE_CACHE_MB` (an error when it is not a number of MiB), else the defaults.
+    fn cache_limits(&self) -> Result<CacheLimits> {
+        if let Some(l) = self.cache_mb {
+            return Ok(l);
+        }
+        match std::env::var("NWN_BAKE_CACHE_MB").ok().filter(|v| !v.trim().is_empty()) {
+            Some(v) => parse_cache_mb(v.trim()).map_err(|e| anyhow::anyhow!("NWN_BAKE_CACHE_MB={v}: not {e}")),
+            None => Ok(CacheLimits::default()),
+        }
+    }
+
+    /// One caches' budget for every game the command opens, at [`GameArgs::cache_limits`].
+    fn budget(&self) -> Result<CacheBudget> {
+        Ok(CacheBudget::new(self.cache_limits()?))
     }
 }
 
@@ -251,6 +273,10 @@ fn parse_on_off(v: &str) -> Result<bool, String> {
 
 fn parse_jobs(v: &str) -> Result<usize, String> {
     v.parse::<usize>().ok().filter(|&n| n > 0).ok_or_else(|| "a number of threads, 1 or more".into())
+}
+
+fn parse_cache_mb(v: &str) -> Result<CacheLimits, String> {
+    v.parse::<u64>().ok().and_then(CacheLimits::total_mib).ok_or_else(|| "a number of MiB, 0 or more".into())
 }
 
 /// `--jobs`, else `NWN_BAKE_JOBS` (an error when it is not a number, 1 or more), else half the cores.
@@ -670,6 +696,11 @@ fn write(path: &Path, bytes: impl AsRef<[u8]>) -> Result<()> {
 
 /// The game for a character command: every hak in the user folder's `hak/` by name, or with `--module` that module's, in its order.
 fn open_game(g: &CharGame) -> Result<Game> {
+    open_game_in(g, &g.game.budget()?)
+}
+
+/// [`open_game`], its caches in `budget`.
+fn open_game_in(g: &CharGame, budget: &CacheBudget) -> Result<Game> {
     let (haks, tlk) = match &g.module {
         None => (Haks::AllInUser, Tlk::given_or_module(g.tlk.given(), None)),
         Some(m) => {
@@ -677,7 +708,7 @@ fn open_game(g: &CharGame) -> Result<Game> {
             (Haks::List(m.haks().to_vec()), Tlk::given_or_module(g.tlk.given(), m.tlk().map(str::to_string)))
         }
     };
-    let game = nwn_bake::game::open(&GameOptions { root: g.game.root.clone(), user: g.game.user()?, haks, tlk })?;
+    let game = nwn_bake::game::open_in(&GameOptions { root: g.game.root.clone(), user: g.game.user()?, haks, tlk }, budget)?;
     if !game.missing_haks().is_empty() {
         note!("haks not found: {}", game.missing_haks().join(", "));
     }
@@ -886,9 +917,11 @@ fn serve(g: &CharGame) -> Result<()> {
         out: Option<String>,
     }
     let user = g.game.user()?;
+    // (One budget for the character game and every game the area requests open: the limits hold for the whole process.)
+    let budget = g.game.budget()?;
     // (The area requests open the game themselves, with each module's haks, and need no user folder. Without one, `serve` still
     // starts, and the requests that need the character game answer why it could not be opened; with one, that is an error now.)
-    let game = match open_game(g) {
+    let game = match open_game_in(g, &budget) {
         Ok(game) => Ok(game),
         Err(e) if user.is_none() && g.module.is_none() => {
             note!("serve: only area requests will work: {e:#}");
@@ -898,7 +931,8 @@ fn serve(g: &CharGame) -> Result<()> {
     };
     // (Areas, placeables_index and textures_of need no GPU: without one, only the requests that do answer with the error.)
     let gpu = gpu();
-    let areas = nwn_bake::iso::batch::Service::new(g.game.root.clone(), user);
+    let mut areas = nwn_bake::iso::batch::Service::new(g.game.root.clone(), user);
+    areas.cache = budget;
     let stdin = std::io::stdin();
     let mut out = std::io::stdout();
     writeln!(out, "{}", serde_json::json!({ "ready": true }))?;
@@ -1024,8 +1058,8 @@ fn area_scene(a: &AreaSceneArgs) -> Result<()> {
     let started = Instant::now();
     let haks = a.haks.clone().map_or_else(|| source.haks().to_vec(), |h| h.0);
     // (The scene has no names in it: no talk table.)
-    let game =
-        nwn_bake::game::open(&GameOptions { root: a.game.root.clone(), user: a.game.user()?, haks: Haks::List(haks), tlk: Tlk::None })?;
+    let options = GameOptions { root: a.game.root.clone(), user: a.game.user()?, haks: Haks::List(haks), tlk: Tlk::None };
+    let game = nwn_bake::game::open_in(&options, &a.game.budget()?)?;
     let game_s = started.elapsed().as_secs_f64();
     let started = Instant::now();
     let scene = nwn_bake::area::scene(&game, &area, &SceneOptions { objects: a.objects, ..Default::default() })?;
@@ -1137,13 +1171,14 @@ fn area_iso(a: AreaIsoArgs) -> Result<usize> {
     }
     let jobs = jobs(a.jobs)?;
     let user = a.game.user()?;
+    let budget = a.game.budget()?;
 
     let started = Instant::now();
     let (source, areas) = a.areas.resolve("area-iso")?;
     let module_s = started.elapsed().as_secs_f64();
     let hak_list = a.haks.map_or_else(|| source.haks().to_vec(), |h| h.0);
     let tlk = Tlk::given_or_module(a.tlk.given(), source.tlk().map(str::to_string));
-    let game = nwn_bake::game::open(&GameOptions { root: a.game.root, user, haks: Haks::List(hak_list), tlk: tlk.clone() })?;
+    let game = nwn_bake::game::open_in(&GameOptions { root: a.game.root, user, haks: Haks::List(hak_list), tlk: tlk.clone() }, &budget)?;
     if !game.missing_haks().is_empty() {
         note!("haks not found: {}", game.missing_haks().join(", "));
     }
@@ -1233,6 +1268,45 @@ mod tests {
     #[test]
     fn the_command_line_is_well_formed() {
         Cli::command().debug_assert();
+    }
+
+    #[test]
+    fn every_command_that_opens_a_game_takes_the_caches_limit() {
+        let parse = |args: &[&str]| Cli::try_parse_from(std::iter::once("nwn-bake").chain(args.iter().copied()));
+        let mb = CacheLimits::total_mib(64).unwrap();
+        let game_args = |cmd: Cmd| -> GameArgs {
+            match cmd {
+                Cmd::Serve { game } | Cmd::Thumb { game, .. } | Cmd::Creature { game, .. } | Cmd::Scene { game, .. } => game.game,
+                Cmd::AreaIso(a) => a.game,
+                Cmd::Area3d(a) => a.game,
+                Cmd::AreaScene(a) => a.game,
+                _ => unreachable!(),
+            }
+        };
+        for args in [
+            &["serve"][..],
+            &["thumb", "a.utc", "b.png"],
+            &["creature", "a.bic", "out"],
+            &["scene", "a.json", "b.png"],
+            &["area-iso", "m.mod", "a", "--out", "o"],
+            &["area-3d", "m.mod", "a", "--out", "o"],
+            &["area-scene", "m.mod", "a"],
+        ] {
+            let with = [args, &["--cache-mb", "64"]].concat();
+            let g = game_args(parse(&with).unwrap_or_else(|e| panic!("{with:?}: {e}")).command);
+            assert_eq!(g.cache_mb, Some(mb), "{with:?}");
+            // (Given, the option wins over NWN_BAKE_CACHE_MB, which this test does not set.)
+            assert_eq!(g.cache_limits().unwrap(), mb);
+            assert_eq!(g.budget().unwrap().limits(), mb);
+            let without = game_args(parse(args).unwrap().command);
+            assert_eq!(without.cache_mb, None, "{args:?}");
+        }
+        assert_eq!(parse_cache_mb("0"), Ok(CacheLimits::total(0)), "0 keeps as little as can be");
+        for bad in ["-1", "lots", "1.5", "", "99999999999999999999", "18446744073709551615"] {
+            assert!(parse_cache_mb(bad).is_err(), "{bad:?}");
+            let e = parse(&["serve", "--cache-mb", bad]).err().unwrap_or_else(|| panic!("{bad:?} parsed"));
+            assert_eq!(e.exit_code(), EXIT_MISUSE, "{bad:?}: {e}");
+        }
     }
 
     #[test]

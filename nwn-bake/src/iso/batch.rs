@@ -1117,8 +1117,9 @@ impl AreaRequest {
     }
 }
 
-/// Answers `serve`'s area requests. The game is opened once per hak list and talk table and kept; the module is read again for
-/// each request, so a change to its files is seen at once; the haks' digests are kept per cache folder.
+/// Answers `serve`'s area requests. The game is opened once per hak list and talk table and kept (the four used last), each in the
+/// one caches' budget [`Service::cache`]; the module is read again for each request, so a change to its files is seen at once; the
+/// haks' digests are kept per cache folder.
 pub struct Service {
     /// The game install; found as the game finds it when None.
     pub root: Option<PathBuf>,
@@ -1126,6 +1127,9 @@ pub struct Service {
     pub user: Option<PathBuf>,
     /// Threads per request (views drawn at once).
     pub jobs: usize,
+    /// The caches' budget every game it opens shares ([`crate::game::open_in`]): the limits hold for all of them together. Its own,
+    /// at the default limits, unless set; `serve` gives it the one its character game has.
+    pub cache: crate::game::CacheBudget,
     games: Mutex<Vec<((Vec<String>, Tlk), Arc<Game>)>>,
     files: Mutex<HashMap<Option<PathBuf>, Arc<FileDigests>>>,
 }
@@ -1133,7 +1137,14 @@ pub struct Service {
 impl Service {
     /// A service for the install `root` and the user folder `user`, drawing on [`default_jobs`] threads a request.
     pub fn new(root: Option<PathBuf>, user: Option<PathBuf>) -> Service {
-        Service { root, user, jobs: default_jobs().max(1), games: Default::default(), files: Default::default() }
+        Service {
+            root,
+            user,
+            jobs: default_jobs().max(1),
+            cache: crate::game::CacheBudget::default(),
+            games: Default::default(),
+            files: Default::default(),
+        }
     }
 
     fn game(&self, haks: Vec<String>, tlk: Tlk) -> Result<Arc<Game>> {
@@ -1141,12 +1152,15 @@ impl Service {
         if let Some((_, g)) = self.games.locked().iter().find(|(k, _)| *k == key) {
             return Ok(g.clone());
         }
-        let g = Arc::new(crate::game::open(&crate::game::GameOptions {
-            root: self.root.clone(),
-            user: self.user.clone(),
-            haks: crate::game::Haks::List(key.0.clone()),
-            tlk: key.1.clone(),
-        })?);
+        let g = Arc::new(crate::game::open_in(
+            &crate::game::GameOptions {
+                root: self.root.clone(),
+                user: self.user.clone(),
+                haks: crate::game::Haks::List(key.0.clone()),
+                tlk: key.1.clone(),
+            },
+            &self.cache,
+        )?);
         let mut games = self.games.locked();
         // (A few hak lists at most; the oldest goes past four.)
         if games.len() >= 4 {

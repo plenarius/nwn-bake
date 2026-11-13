@@ -4,7 +4,8 @@
 //! The command line itself, on the generated fixture (`nwn-bake/tests/support/fixture.rs`; no game content): help, version and
 //! misuse (exit code 2, before the game is opened); the user folder from `--user`, `NWN_BAKE_USER` or `NWN_HOME` for every
 //! command; `serve` without a user folder, and its unknown requests; the talk table (a wrong `--tlk` is an error, a name without
-//! `.tlk` is found, the name recorded is the file read); a wrong `--root`; an install in another language; and errors that name the file.
+//! `.tlk` is found, the name recorded is the file read); the caches' limit from `--cache-mb` or `NWN_BAKE_CACHE_MB` for every
+//! command, the same pictures whatever it is; a wrong `--root`; an install in another language; and errors that name the file.
 
 #[path = "../../nwn-bake/tests/support/fixture.rs"]
 mod fixture;
@@ -19,7 +20,16 @@ use serde_json::Value;
 fn bake(home: &Path, args: &[&str], env: &[(&str, &Path)]) -> Output {
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.args(args);
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_USER_DIRECTORY", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS"] {
+    for v in [
+        "NWN_BAKE_USER",
+        "NWN_BAKE_TLK",
+        "NWN_ROOT",
+        "NWN_HOME",
+        "NWN_USER_DIRECTORY",
+        "NWN_BAKE_COMMIT",
+        "NWN_BAKE_JOBS",
+        "NWN_BAKE_CACHE_MB",
+    ] {
         c.env_remove(v);
     }
     c.env("HOME", home);
@@ -83,6 +93,43 @@ fn the_user_folder_comes_from_one_rule() {
 }
 
 #[test]
+fn the_caches_limit_reaches_every_command_and_changes_no_picture() {
+    let f = fixture::write(&fixture::dir("cli-cache-mb"));
+    let module = f.module_mod();
+    let game = ["--root", s(&f.root), "--user", s(&f.user)];
+    // NWN_BAKE_CACHE_MB is read by every command that opens a game, `serve` too: one that is not a number is an error naming it.
+    let lots: &Path = Path::new("lots");
+    for args in [
+        &["area-iso", s(&module), "fx_flat", "--out", s(&f.base.join("x")), "--view", "top"][..],
+        &["area-3d", s(&module), "fx_flat", "--out", s(&f.base.join("x"))],
+        &["area-scene", s(&module), "fx_flat"],
+        &["thumb", "a.utc", "b.png"],
+        &["serve"],
+    ] {
+        let o = bake(&f.base, &[args, &game[..]].concat(), &[("NWN_BAKE_CACHE_MB", lots)]);
+        assert_eq!(o.status.code(), Some(1), "{args:?}: {}", stderr(&o));
+        assert!(stderr(&o).contains("NWN_BAKE_CACHE_MB=lots: not a number of MiB"), "{args:?}: {}", stderr(&o));
+        // The option wins over the variable.
+        let given = bake(&f.base, &[args, &game[..], &["--cache-mb", "-1"]].concat(), &[("NWN_BAKE_CACHE_MB", Path::new("64"))]);
+        assert_eq!(given.status.code(), Some(2), "{args:?}: {}", stderr(&given));
+    }
+    // The same pictures and manifest with the default caches, with none (from the option) and with a few MiB (from the variable).
+    let area = |out: &Path, extra: &[&str], env: &[(&str, &Path)]| {
+        let args =
+            [&["area-iso", s(&module), "fx_flat", "--out", s(out), "--view", "top", "--format", "png"][..], &game[..], extra].concat();
+        let o = bake(&f.base, &args, env);
+        assert!(o.status.success(), "{extra:?}: {}", stderr(&o));
+        let m: Value = serde_json::from_slice(&std::fs::read(out.join("fx_flat.json")).unwrap()).unwrap();
+        let png = std::fs::read(out.join(m["views"][0]["file"].as_str().unwrap())).unwrap();
+        (png, m)
+    };
+    let default = area(&f.base.join("default"), &[], &[]);
+    assert_eq!(area(&f.base.join("none"), &["--cache-mb", "0"], &[]), default);
+    assert_eq!(area(&f.base.join("few"), &[], &[("NWN_BAKE_CACHE_MB", Path::new("3"))]), default);
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
 fn serve_starts_without_a_user_folder() {
     use std::io::Write;
     let f = fixture::write(&fixture::dir("cli-serve-nouser"));
@@ -94,7 +141,7 @@ fn serve_starts_without_a_user_folder() {
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.args(["serve", "--root", s(&f.root)]).stdin(std::process::Stdio::piped()).stdout(std::process::Stdio::piped());
     c.stderr(std::process::Stdio::null()).env("HOME", &f.base);
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_USER_DIRECTORY"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_USER_DIRECTORY", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     let mut child = c.spawn().unwrap();

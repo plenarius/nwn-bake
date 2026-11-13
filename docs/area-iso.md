@@ -155,7 +155,11 @@ thread.
 
 `--all` (or several areas by name) works on `--jobs` threads: by default half the cores, or `NWN_BAKE_JOBS` (a batch
 usually shares its machine). An area is first checked, then drawn, its views on several threads at once; the threads draw
-the views of the areas already started before starting more, so few areas are in memory at once. For each area:
+the views of the areas already started before starting more, so few areas are in memory at once. The models and textures read
+are kept for the next areas, within `--cache-mb` MiB (or `NWN_BAKE_CACHE_MB`; 4096 by default, `0` for as little as can be), the
+least recently used dropped first; the limit changes no picture and no key, only how often a model or texture is read again. What
+the areas in progress hold is not counted, so the peak grows with `--jobs` (the README's "Memory" has measured numbers). For each
+area:
 
 1. The quick key (with `--all` or `--cache`): when the area's manifest in the output folder has this quick key and an exact key,
    and its pictures are there with the sizes it says, the area is **current**: nothing is read or written.
@@ -185,7 +189,7 @@ is read.
 ## serve
 
 `nwn-bake serve` answers the same requests for single areas (`area_iso` and `area_iso_key`), with the same options and the same
-manifests: see `serve.md`.
+manifests: see `serve.md`. Its `--cache-mb` bounds the games of every hak list it opens together.
 
 ## Schemas
 

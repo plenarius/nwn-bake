@@ -29,7 +29,7 @@ fn describe_finds_a_blueprint_s_items_in_a_folder_and_says_which_it_cannot() {
     let describe = |extra: &[&str]| -> Output {
         let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
         c.args(["describe", s(&utc), "--root", s(&f.root), "--user", s(&f.user)]).args(extra).env("HOME", &f.base);
-        for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_USER_DIRECTORY"] {
+        for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_USER_DIRECTORY", "NWN_BAKE_CACHE_MB"] {
             c.env_remove(v);
         }
         c.output().unwrap()

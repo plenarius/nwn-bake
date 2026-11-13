@@ -101,6 +101,7 @@ pub struct Game {
     tlk: Option<PathBuf>,
     flats: Cache<crate::Flat>,
     textures: Cache<crate::texture::Mipped>,
+    budget: CacheBudget,
     /// SHA-256 of what a lookup of the resources finds ([`Game::resources_digest`]); None when it finds nothing.
     digests: Mutex<HashMap<(String, &'static str), Option<[u8; 32]>>>,
 }
@@ -127,15 +128,109 @@ impl Weigh for crate::texture::Mipped {
     }
 }
 
-/// Results by lower-case name; a failure is kept as its message, so it is not tried again. When what is kept weighs more than the
-/// limit, the entries used least recently are dropped (whoever holds one keeps it; it is made again when asked for again), so a
-/// batch of a whole module does not keep every model and texture it ever read.
-struct Cache<T> {
-    inner: Mutex<CacheInner<T>>,
+/// How much the caches of flattened models and decoded textures may keep between uses, roughly in bytes. What is in use is kept by
+/// whoever uses it, whatever the limits; they bound only what is kept for the next time it is asked for. They never change what is
+/// drawn or a key: an entry dropped is made again, the same, when it is asked for again.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub struct CacheLimits {
+    /// Flattened models.
+    pub flats: usize,
+    /// Decoded textures.
+    pub textures: usize,
 }
 
-struct CacheInner<T> {
-    map: HashMap<String, Entry<T>>,
+impl Default for CacheLimits {
+    /// [`FLAT_CACHE`] and [`TEXTURE_CACHE`].
+    fn default() -> CacheLimits {
+        CacheLimits { flats: FLAT_CACHE, textures: TEXTURE_CACHE }
+    }
+}
+
+impl CacheLimits {
+    /// `total` bytes, split as the defaults are: a quarter for models, the rest for textures. 0 keeps as little as can be (the
+    /// entry made last of each kind).
+    pub fn total(total: usize) -> CacheLimits {
+        let flats = total / 4;
+        CacheLimits { flats, textures: total - flats }
+    }
+
+    /// `mib` MiB (2^20 bytes) in all, split as [`CacheLimits::total`] does; None when that many bytes do not fit in a `usize`.
+    pub fn total_mib(mib: u64) -> Option<CacheLimits> {
+        usize::try_from(mib).ok().and_then(|m| m.checked_mul(1 << 20)).map(CacheLimits::total)
+    }
+
+    /// The two limits together, in bytes.
+    pub fn sum(&self) -> usize {
+        self.flats.saturating_add(self.textures)
+    }
+}
+
+/// The caches' budget: one pool of flattened models and one of decoded textures, each with its limit, shared by every [`Game`]
+/// opened with it ([`open_in`]). The limits bound what all those `Game`s keep together, the entries used least recently dropped
+/// first, whichever `Game` they belong to; so a program that opens several (`serve` opens one per hak list) keeps no more than one
+/// would. [`open`] gives each `Game` a budget of its own, with the default limits. Cloning it shares it.
+#[derive(Clone)]
+pub struct CacheBudget {
+    flats: Arc<Pool<crate::Flat>>,
+    textures: Arc<Pool<crate::texture::Mipped>>,
+}
+
+impl std::fmt::Debug for CacheBudget {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CacheBudget").field("limits", &self.limits()).field("kept", &self.kept()).finish()
+    }
+}
+
+impl Default for CacheBudget {
+    /// A budget with the default limits ([`CacheLimits::default`]).
+    fn default() -> CacheBudget {
+        CacheBudget::new(CacheLimits::default())
+    }
+}
+
+impl CacheBudget {
+    /// A budget with these limits, shared by no `Game` yet.
+    pub fn new(limits: CacheLimits) -> CacheBudget {
+        CacheBudget { flats: Arc::new(Pool::new(limits.flats)), textures: Arc::new(Pool::new(limits.textures)) }
+    }
+
+    /// The limits.
+    pub fn limits(&self) -> CacheLimits {
+        CacheLimits { flats: self.flats.locked().limit, textures: self.textures.locked().limit }
+    }
+
+    /// Changes the limits for every `Game` that shares this budget; what is kept beyond them is dropped now.
+    pub fn set_limits(&self, limits: CacheLimits) {
+        let mut f = self.flats.locked();
+        f.limit = limits.flats;
+        f.trim(None);
+        drop(f);
+        let mut t = self.textures.locked();
+        t.limit = limits.textures;
+        t.trim(None);
+    }
+
+    /// What the pools keep now, roughly in bytes (models, textures).
+    pub fn kept(&self) -> CacheLimits {
+        CacheLimits { flats: self.flats.locked().weight, textures: self.textures.locked().weight }
+    }
+
+    /// Drops everything kept, for every `Game` that shares this budget (whoever holds an entry keeps it).
+    pub fn clear(&self) {
+        self.flats.locked().retain(|_| false);
+        self.textures.locked().retain(|_| false);
+    }
+}
+
+/// One kind of cache, for every `Game` of a budget: results by `Game` and lower-case name; a failure is kept as its message, so it is
+/// not tried again. When what is kept weighs more than the limit, the entries used least recently are dropped (whoever holds one
+/// keeps it; it is made again when asked for again), so a batch of a whole module does not keep every model and texture it ever read.
+struct Pool<T> {
+    inner: Mutex<PoolInner<T>>,
+}
+
+struct PoolInner<T> {
+    map: HashMap<(u64, String), Entry<T>>,
     tick: u64,
     weight: usize,
     limit: usize,
@@ -147,24 +242,81 @@ struct Entry<T> {
     weight: usize,
 }
 
-impl<T> Cache<T> {
-    fn new(limit: usize) -> Cache<T> {
-        Cache { inner: Mutex::new(CacheInner { map: HashMap::new(), tick: 0, weight: 0, limit }) }
+impl<T> Pool<T> {
+    fn new(limit: usize) -> Pool<T> {
+        Pool { inner: Mutex::new(PoolInner { map: HashMap::new(), tick: 0, weight: 0, limit }) }
     }
 
-    fn clear(&mut self) {
-        let inner = self.inner.inner_mut();
-        inner.map.clear();
-        inner.weight = 0;
+    fn locked(&self) -> std::sync::MutexGuard<'_, PoolInner<T>> {
+        self.inner.locked()
+    }
+}
+
+impl<T> PoolInner<T> {
+    /// Keeps the entries `keep` says yes to.
+    fn retain(&mut self, mut keep: impl FnMut(&(u64, String)) -> bool) {
+        let mut dropped = 0;
+        self.map.retain(|k, e| {
+            let kept = keep(k);
+            if !kept {
+                dropped += e.weight;
+            }
+            kept
+        });
+        self.weight -= dropped;
+    }
+
+    /// When what is kept weighs more than the limit, drops the entries used least recently but `spare` down to nine tenths of it
+    /// (so this is not done again at the next entry).
+    fn trim(&mut self, spare: Option<&(u64, String)>) {
+        if self.weight <= self.limit {
+            return;
+        }
+        let mut by_age: Vec<(u64, (u64, String))> =
+            self.map.iter().filter(|(k, _)| Some(*k) != spare).map(|(k, e)| (e.used, k.clone())).collect();
+        by_age.sort_unstable();
+        let goal = self.limit / 10 * 9;
+        for (_, k) in by_age {
+            if self.weight <= goal {
+                break;
+            }
+            if let Some(e) = self.map.remove(&k) {
+                self.weight -= e.weight;
+            }
+        }
+    }
+}
+
+/// A `Game`'s share of a pool: its entries, under an id no other `Game` has. Dropping it drops them.
+struct Cache<T> {
+    pool: Arc<Pool<T>>,
+    id: u64,
+}
+
+impl<T> Cache<T> {
+    fn new(pool: Arc<Pool<T>>) -> Cache<T> {
+        static NEXT: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+        Cache { pool, id: NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed) }
+    }
+
+    fn clear(&self) {
+        let id = self.id;
+        self.pool.locked().retain(|k| k.0 != id);
+    }
+}
+
+impl<T> Drop for Cache<T> {
+    fn drop(&mut self) {
+        self.clear();
     }
 }
 
 /// `name`'s entry in `cache`, made by `make` the first time. (Made outside the lock: two threads asking at once may both make it,
 /// and the first one kept wins. The result is the same either way.)
 fn cached<T: Weigh>(cache: &Cache<T>, name: &str, make: impl FnOnce(&str) -> Result<T>) -> Result<Arc<T>> {
-    let key = name.to_ascii_lowercase();
+    let key = (cache.id, name.to_ascii_lowercase());
     {
-        let mut c = cache.inner.locked();
+        let mut c = cache.pool.locked();
         c.tick += 1;
         let tick = c.tick;
         if let Some(e) = c.map.get_mut(&key) {
@@ -172,8 +324,8 @@ fn cached<T: Weigh>(cache: &Cache<T>, name: &str, make: impl FnOnce(&str) -> Res
             return e.value.clone().map_err(anyhow::Error::msg);
         }
     }
-    let made = make(&key).map(Arc::new).map_err(|e| format!("{e:#}"));
-    let mut c = cache.inner.locked();
+    let made = make(&key.1).map(Arc::new).map_err(|e| format!("{e:#}"));
+    let mut c = cache.pool.locked();
     c.tick += 1;
     let tick = c.tick;
     if let Some(e) = c.map.get_mut(&key) {
@@ -183,20 +335,7 @@ fn cached<T: Weigh>(cache: &Cache<T>, name: &str, make: impl FnOnce(&str) -> Res
     let weight = made.as_ref().map_or(64, |v| v.weight());
     c.weight += weight;
     c.map.insert(key.clone(), Entry { value: made.clone(), used: tick, weight });
-    if c.weight > c.limit {
-        // (Down to nine tenths of the limit, oldest first, so this is not done again at the next entry.)
-        let mut by_age: Vec<(u64, String)> = c.map.iter().filter(|(k, _)| **k != key).map(|(k, e)| (e.used, k.clone())).collect();
-        by_age.sort_unstable();
-        let goal = c.limit / 10 * 9;
-        for (_, k) in by_age {
-            if c.weight <= goal {
-                break;
-            }
-            if let Some(e) = c.map.remove(&k) {
-                c.weight -= e.weight;
-            }
-        }
-    }
+    c.trim(Some(&key));
     made.map_err(anyhow::Error::msg)
 }
 
@@ -212,8 +351,14 @@ pub const FLAT_CACHE: usize = 1 << 30;
 /// How much the cache of decoded textures keeps by default, roughly in bytes: 3 GiB.
 pub const TEXTURE_CACHE: usize = 3 << 30;
 
-/// Opens the game as `o` says.
+/// Opens the game as `o` says, with caches of its own at the default limits ([`CacheLimits::default`]).
 pub fn open(o: &GameOptions) -> Result<Game> {
+    open_in(o, &CacheBudget::default())
+}
+
+/// Opens the game as `o` says, its caches kept in `budget`'s pools, within its limits together with every other `Game` that shares
+/// it.
+pub fn open_in(o: &GameOptions, budget: &CacheBudget) -> Result<Game> {
     let mut install = match &o.root {
         Some(root) => {
             anyhow::ensure!(root.is_dir(), "{}: no such folder (the game install)", root.display());
@@ -259,8 +404,9 @@ pub fn open(o: &GameOptions) -> Result<Game> {
         haks: names,
         missing,
         tlk,
-        flats: Cache::new(FLAT_CACHE),
-        textures: Cache::new(TEXTURE_CACHE),
+        flats: Cache::new(budget.flats.clone()),
+        textures: Cache::new(budget.textures.clone()),
+        budget: budget.clone(),
         digests: Default::default(),
     })
 }
@@ -287,10 +433,15 @@ impl Game {
     }
 
     /// How much the caches of flattened models and decoded textures may keep, roughly in bytes ([`FLAT_CACHE`] and
-    /// [`TEXTURE_CACHE`] by default). Only the weight kept between uses: what is in use is kept by whoever uses it.
+    /// [`TEXTURE_CACHE`] by default). Only the weight kept between uses: what is in use is kept by whoever uses it. The limits are
+    /// the budget's ([`Game::cache_budget`]), so they change for every `Game` that shares it.
     pub fn set_cache_limits(&mut self, flats: usize, textures: usize) {
-        self.flats.inner.inner_mut().limit = flats;
-        self.textures.inner.inner_mut().limit = textures;
+        self.budget.set_limits(CacheLimits { flats, textures });
+    }
+
+    /// The budget this `Game`'s caches are kept in ([`open_in`]).
+    pub fn cache_budget(&self) -> &CacheBudget {
+        &self.budget
     }
 
     /// Lays more haks under the ones already there (each lower than every hak before it); returns those found nowhere (also kept in
@@ -468,6 +619,68 @@ fn all_in_user(user: Option<&Path>) -> Result<Vec<String>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    /// A cache entry that weighs what it says.
+    struct Lump(usize);
+
+    impl Weigh for Lump {
+        fn weight(&self) -> usize {
+            self.0
+        }
+    }
+
+    #[test]
+    fn one_budget_bounds_every_cache_in_it_together() {
+        let pool = Arc::new(Pool::<Lump>::new(100));
+        let (a, b) = (Cache::new(pool.clone()), Cache::new(pool.clone()));
+        let made = std::cell::Cell::new(0);
+        let get = |c: &Cache<Lump>, name: &str| {
+            cached(c, name, |_| {
+                made.set(made.get() + 1);
+                Ok(Lump(30))
+            })
+            .unwrap()
+        };
+        // The same name in two caches is two entries; three fit, the fourth drops the oldest, whichever cache it is in.
+        get(&a, "x");
+        get(&b, "x");
+        get(&a, "y");
+        assert_eq!((pool.locked().weight, made.get()), (90, 3));
+        get(&b, "y");
+        let weight = pool.locked().weight;
+        assert!(weight <= 100, "{weight}");
+        assert!(!pool.locked().map.contains_key(&(a.id, "x".to_string())), "a's x was used least recently");
+        get(&a, "x");
+        assert_eq!(made.get(), 5, "made again when asked for again");
+        // A cache dropped takes its entries with it.
+        drop(a);
+        let p = pool.locked();
+        assert_eq!(p.weight, p.map.len() * 30);
+        assert!(p.map.keys().all(|k| k.0 == b.id));
+        drop(p);
+    }
+
+    #[test]
+    fn a_zero_limit_keeps_the_entry_made_last_only() {
+        let pool = Arc::new(Pool::<Lump>::new(0));
+        let c = Cache::new(pool.clone());
+        for name in ["a", "b", "c"] {
+            cached(&c, name, |_| Ok(Lump(1000))).unwrap();
+            assert_eq!(pool.locked().map.len(), 1);
+        }
+        assert!(pool.locked().map.contains_key(&(c.id, "c".to_string())));
+    }
+
+    #[test]
+    fn the_limits_split_a_quarter_for_models_and_refuse_what_does_not_fit() {
+        assert_eq!(CacheLimits::total_mib(4096), Some(CacheLimits::default()));
+        assert_eq!(CacheLimits::total_mib(0), Some(CacheLimits { flats: 0, textures: 0 }));
+        assert_eq!(CacheLimits::total(10), CacheLimits { flats: 2, textures: 8 });
+        assert_eq!(CacheLimits::total_mib(u64::MAX), None);
+        let budget = CacheBudget::new(CacheLimits::total(4));
+        budget.set_limits(CacheLimits::default());
+        assert_eq!(budget.limits(), CacheLimits::default());
+    }
 
     fn dir(tag: &str) -> PathBuf {
         let d = std::env::temp_dir().join(format!("nwn-bake-game-{tag}-{}", std::process::id()));

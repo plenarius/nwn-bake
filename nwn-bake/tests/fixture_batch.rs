@@ -4,7 +4,8 @@
 //! Batches and the cache (`nwn_bake::iso::batch`) on the generated fixture (`support/fixture.rs`; no game content): every area
 //! drawn once, a second run drawing nothing and leaving every file as it was, a changed `.git` drawing that area only, a changed
 //! hak entry that no area reads drawing nothing, a changed tileset texture drawing the areas that read it, pictures coming back from
-//! the cache, the same files whatever the number of threads, the keys, WebP and depth pictures, and `serve`'s two requests.
+//! the cache, the same files whatever the number of threads or the caches' limit, the keys, WebP and depth pictures, and `serve`'s
+//! two requests and its one caches' budget.
 
 #[path = "support/fixture.rs"]
 mod fixture;
@@ -13,7 +14,7 @@ use std::collections::BTreeMap;
 use std::path::Path;
 
 use mg_core::ResType;
-use nwn_bake::game::{self, Game, GameOptions, Haks, Tlk};
+use nwn_bake::game::{self, CacheBudget, CacheLimits, Game, GameOptions, Haks, Tlk};
 use nwn_bake::iso::batch::{self, Action, AreaRequest, FileDigests, Job, Service};
 use nwn_bake::iso::{Format, IsoOptions, OutOptions, View};
 use nwn_bake::module::ModuleSource;
@@ -22,13 +23,17 @@ use serde_json::Value;
 const ALL: [View; 5] = [View::Sw, View::Se, View::Ne, View::Nw, View::Top];
 
 fn open(f: &fixture::Fixture) -> Game {
-    game::open(&GameOptions {
+    open_in(f, &CacheBudget::default())
+}
+
+fn open_in(f: &fixture::Fixture, budget: &CacheBudget) -> Game {
+    let o = GameOptions {
         root: Some(f.root.clone()),
         user: Some(f.user.clone()),
         haks: Haks::List(fixture::HAKS.map(String::from).to_vec()),
         tlk: Tlk::None,
-    })
-    .unwrap()
+    };
+    game::open_in(&o, budget).unwrap()
 }
 
 /// The format the batch tests write: WebP when this build has it.
@@ -55,7 +60,12 @@ fn job(out: &Path, cache: Option<&Path>, jobs: usize) -> Job {
 /// Runs a batch of every area of the fixture's nasher project, as a new process would (the game opened anew, the haks' digests
 /// read from the cache); returns each area's action.
 fn run(f: &fixture::Fixture, job: &Job) -> BTreeMap<String, Action> {
-    let g = open(f);
+    run_in(f, job, &CacheBudget::default())
+}
+
+/// [`run`], the game's caches in `budget`.
+fn run_in(f: &fixture::Fixture, job: &Job, budget: &CacheBudget) -> BTreeMap<String, Action> {
+    let g = open_in(f, budget);
     let source = ModuleSource::open(&f.project()).unwrap();
     let files = FileDigests::at(job.cache.as_ref().map(|c| c.join("v1").join("files.json")));
     let results = batch::run(&g, &source, &source.areas(), job, Some(&files), &|_| {}).unwrap();
@@ -269,6 +279,58 @@ fn pictures_come_back_from_the_cache_and_the_threads_change_nothing() {
     // --force draws them anyway, and they are the same.
     assert_eq!(run(&f, &Job { force: true, ..job(&again, Some(&cache), 4) }), all(Action::Rendered));
     assert_eq!(bytes(&again), b5);
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
+fn the_caches_limit_changes_no_picture_and_no_key() {
+    let f = fixture::write(&fixture::dir("batch-cache-limit"));
+    let bytes = |d: &Path| files(d).into_iter().map(|(n, (b, _))| (n, b)).collect::<BTreeMap<_, _>>();
+    // Every area with the default limits, then with none at all (each model and texture made again whenever it is asked for
+    // again), on one thread and on three: the same files, manifests and keys included.
+    let default = f.base.join("default");
+    assert_eq!(run(&f, &job(&default, None, 1)), all(Action::Rendered));
+    let want = bytes(&default);
+    for jobs in [1, 3] {
+        let tiny = f.base.join(format!("tiny-{jobs}"));
+        let budget = CacheBudget::new(CacheLimits::total(0));
+        assert_eq!(run_in(&f, &job(&tiny, None, jobs), &budget), all(Action::Rendered));
+        let got = bytes(&tiny);
+        assert_eq!(want.keys().collect::<Vec<_>>(), got.keys().collect::<Vec<_>>());
+        for (n, b) in &want {
+            assert!(b == &got[n], "{n} differs with no cache ({jobs} threads)");
+        }
+        // (The game is gone, and what it kept with it.)
+        assert_eq!(budget.kept(), CacheLimits::total(0));
+    }
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
+fn every_game_serve_opens_shares_its_caches_budget() {
+    let f = fixture::write(&fixture::dir("batch-serve-budget"));
+    let out = f.base.join("out");
+    let mut service = Service::new(Some(f.root.clone()), Some(f.user.clone()));
+    let budget = CacheBudget::new(CacheLimits::total(64 << 20));
+    service.cache = budget.clone();
+    let req = |haks: Value| -> AreaRequest {
+        serde_json::from_value(
+            serde_json::json!({ "module": f.project(), "area": "fx_main", "views": ["top"], "shadows": false, "out": out, "force": true, "haks": haks }),
+        )
+        .unwrap()
+    };
+    // Two hak lists, two games: both keep what they read in the one budget.
+    service.area_iso(&req(serde_json::json!(fixture::HAKS))).unwrap();
+    let one = budget.kept();
+    assert!(one.flats > 0 && one.textures > 0, "{one:?}");
+    service.area_iso(&req(serde_json::json!(["fx_tiles"]))).unwrap();
+    let two = budget.kept();
+    assert!(two.flats > one.flats && two.textures > one.textures, "{one:?} then {two:?}");
+    // Lowered for all of them at once: nothing beyond it is kept, and the next request still draws.
+    budget.set_limits(CacheLimits::total(0));
+    assert_eq!(budget.kept(), CacheLimits::total(0));
+    let again = service.area_iso(&req(serde_json::json!(fixture::HAKS))).unwrap();
+    assert_eq!(again["action"].as_str(), Some("rendered"));
     let _ = std::fs::remove_dir_all(&f.base);
 }
 
