@@ -20,7 +20,7 @@ const VIEWS: [&str; 5] = ["sw", "se", "ne", "nw", "top"];
 fn run(f: &fixture::Fixture, args: &[&str]) -> Output {
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.args(args).arg("--root").arg(&f.root).arg("--user").arg(&f.user);
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     c.output().unwrap()
@@ -312,7 +312,7 @@ fn serve_answers_area_requests() {
         .stdin(std::process::Stdio::piped())
         .stdout(std::process::Stdio::piped())
         .stderr(std::process::Stdio::null());
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     let mut child = c.spawn().unwrap();
@@ -363,7 +363,7 @@ fn run_with_closed_output(f: &fixture::Fixture, args: &[&str]) -> Option<i32> {
     use std::process::Stdio;
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.args(args).arg("--root").arg(&f.root).arg("--user").arg(&f.user).stdout(Stdio::piped()).stderr(Stdio::piped());
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     let mut child = c.spawn().unwrap();

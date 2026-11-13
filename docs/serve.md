@@ -5,7 +5,7 @@ requests are answered one after another. A program that asks for many pictures (
 and keeps it.
 
 ```text
-nwn-bake serve [--root <game install>] [--user <user folder>] [--tlk <name or path>] [--module <module>]
+nwn-bake serve [--root <game install>] [--user <user folder>] [--tlk <name or path>] [--module <module>] [--cache-mb <MiB>]
 ```
 
 - `--root` is the NWN:EE install (the folder with `data/` and `lang/`); without it the install is found as the game finds it.
@@ -19,6 +19,11 @@ nwn-bake serve [--root <game install>] [--user <user folder>] [--tlk <name or pa
 - `--tlk` (or `NWN_BAKE_TLK`) names the custom talk table: a file name in the user folder's `tlk/` or `hak/` (`.tlk` may be left
   out) or a path. Not finding it, or a file that is not a talk table, is an error. By default the module's (none when it is not
   there), else the one `.tlk` in the user folder's `tlk/` or `hak/`.
+- `--cache-mb` (or `NWN_BAKE_CACHE_MB`) bounds, in MiB, what the model and texture caches keep between requests: a quarter for
+  models, the rest for textures, the entries used least recently dropped first. The default is 4096; `0` keeps as little as can be.
+  It is one budget for the whole process: the game the character requests use and every game the area requests open (below) share
+  it, so it bounds them together, however many hak lists are asked for. It never changes an answer, a picture or a key. What a
+  request is drawing is not counted. See the README's "Memory".
 
 ## Lines
 
@@ -123,7 +128,8 @@ defaults: `views` (a list, or `"all,top"`), `scale`, `quality`, `light`, `shadow
   folder when `out` is given, have pictures of that exact key. It builds the scene but draws nothing. A program can use it after a
   module or hak change to find, cheaply, which areas need drawing again.
 
-For areas, the game is opened once for each hak list and talk table (at most four kept), and the haks' digests are kept; the module
+For areas, the game is opened once for each hak list and talk table (at most four kept), all of them within the one cache budget
+(`--cache-mb`), and the haks' digests are kept; the module
 is read again for each request, so a change to its files is seen at once (a nasher project is listed, well under a second for one of
 1,300 areas, and only the area's two files are read).
 

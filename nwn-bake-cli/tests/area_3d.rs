@@ -16,7 +16,7 @@ use serde_json::Value;
 fn run(f: &fixture::Fixture, args: &[&str]) -> Output {
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.arg("area-3d").args(args).arg("--root").arg(&f.root).arg("--user").arg(&f.user);
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     c.output().unwrap()
@@ -129,7 +129,7 @@ fn a_batch_ends_when_its_output_is_closed() {
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.arg("area-3d").args([s(&f.module_mod()), "--all", "--out", s(&out), "--jobs", "3"]);
     c.arg("--root").arg(&f.root).arg("--user").arg(&f.user).stdout(Stdio::piped()).stderr(Stdio::piped());
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     let mut child = c.spawn().unwrap();
@@ -158,7 +158,7 @@ fn run_stdin(f: &fixture::Fixture, args: &[&str], stdin: &str) -> Output {
     use std::process::Stdio;
     let mut c = Command::new(env!("CARGO_BIN_EXE_nwn-bake"));
     c.arg("area-3d").args(args).arg("--root").arg(&f.root).arg("--user").arg(&f.user);
-    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS"] {
+    for v in ["NWN_BAKE_USER", "NWN_BAKE_TLK", "NWN_ROOT", "NWN_HOME", "NWN_BAKE_COMMIT", "NWN_BAKE_JOBS", "NWN_BAKE_CACHE_MB"] {
         c.env_remove(v);
     }
     let mut child = c.stdin(Stdio::piped()).stdout(Stdio::piped()).stderr(Stdio::piped()).spawn().unwrap();

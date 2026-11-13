@@ -71,7 +71,7 @@ pub struct Area3dArgs {
     #[arg(long)]
     strict: bool,
     #[command(flatten)]
-    game: GameArgs,
+    pub(crate) game: GameArgs,
     #[command(flatten)]
     tlk: TlkArg,
 }
@@ -129,6 +129,7 @@ pub fn run(a: Area3dArgs) -> Result<usize> {
     let mut o = Options { max_tex: a.max_tex, quality: a.quality, objects: a.objects, ..Options::default() };
     let jobs = crate::jobs(a.jobs)?;
     let user = a.game.user()?;
+    let budget = a.game.budget()?;
     let out = a.out;
     let tex_dir = a.tex_dir.unwrap_or_else(|| out.join("tex"));
     o.tex_uri = match a.tex_uri {
@@ -158,7 +159,7 @@ pub fn run(a: Area3dArgs) -> Result<usize> {
     let areas = draft.as_ref().map_or(areas, |d| vec![d.area.resref.clone()]);
     let hak_list = a.haks.map_or_else(|| source.haks().to_vec(), |h| h.0);
     let tlk = Tlk::given_or_module(a.tlk.given(), source.tlk().map(str::to_string));
-    let game = nwn_bake::game::open(&GameOptions { root: a.game.root, user, haks: Haks::List(hak_list), tlk: tlk.clone() })?;
+    let game = nwn_bake::game::open_in(&GameOptions { root: a.game.root, user, haks: Haks::List(hak_list), tlk: tlk.clone() }, &budget)?;
     let open_s = started.elapsed().as_secs_f64();
     if !game.missing_haks().is_empty() {
         note!("haks not found: {}", game.missing_haks().join(", "));

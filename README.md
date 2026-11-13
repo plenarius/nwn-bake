@@ -112,6 +112,7 @@ line per area and view) and `index.json`.
 | `--layout flat\|tree` | `tree` with `--all` | Files side by side, or in folders by kind and view |
 | `--name '{area}.{view}.{ext}'` | | File names, for `flat` |
 | `--jobs N` | half the cores (`NWN_BAKE_JOBS`) | Threads |
+| `--cache-mb <MiB>` | 4096 (`NWN_BAKE_CACHE_MB`) | What the model and texture caches keep between areas (see Memory) |
 | `--cache <dir>` | | Keep every key's pictures, so a change undone costs nothing |
 | `--force` | | Draw even what the keys say is there |
 | `--strict` | | A hak of the module's list that is not found fails the area |
@@ -191,11 +192,12 @@ camera, each object's box and what it left out, and the pixel positions of the s
 ## A baker that stays: `serve`
 
 ```text
-nwn-bake serve [--root <install>] [--user <folder>] [--tlk <name>] [--module <module>]
+nwn-bake serve [--root <install>] [--user <folder>] [--tlk <name>] [--module <module>] [--cache-mb <MiB>]
 ```
 
 One JSON request a line on stdin, one answer a line on stdout: characters as parts, pictures of creatures, items and placeables, a
-placeable's textures, scenes (`scene`), and areas (`area_iso`, `area_iso_key`). The game is opened once. See `docs/serve.md`.
+placeable's textures, scenes (`scene`), and areas (`area_iso`, `area_iso_key`). The game is opened once. `--cache-mb` (or
+`NWN_BAKE_CACHE_MB`) bounds what it keeps for the whole process (see Memory). See `docs/serve.md`.
 
 ## Other commands
 
@@ -229,6 +231,22 @@ the meshes are the base's own:
  "base": {"model": "pmh0", "attach": null, "scale": 1, "textures": {}, "env_map": null, "animated": false, "colored": true},
  "part": {"model": "pmh0_head001", "attach": "head_g", "scale": 1, "textures": {}, "env_map": null, "animated": false, "colored": true}}
 ```
+
+## Memory
+
+A process that opens the game keeps the models it flattened and the textures it decoded, so the next area or picture that uses
+them does not read them again. `--cache-mb <MiB>` (or `NWN_BAKE_CACHE_MB`), on every command that opens the game, `serve`
+included, bounds what those caches keep between uses: a quarter for models, the rest for textures, the entries used least recently
+dropped first. The default is 4096 (1 GiB for models, 3 GiB for textures). `0` keeps as little as can be (the model and the
+texture made last); a value that is not a whole number of MiB, 0 or more, is refused. The limit is for the whole process: `serve`
+and a batch share one budget between every game they open. It never changes a picture, a `.glb` or a key: an entry dropped is
+made again, the same, when it is asked for again; a smaller cache costs time, not output.
+
+What is being drawn is not counted: each area in progress holds its scene and its pictures while it is drawn, so a batch's peak
+grows with `--jobs` and with the areas' size and `--scale`. Measured on Linux with the default caches: a 32x32 area at the default
+scale peaked at about 1.4 GB in one process, and a 40-thread batch of a module of 1,338 areas at 21.5 GB. On a small machine,
+lower `--jobs` first, then `--cache-mb`. Memory the caches give back is reused by the process, but is not always returned to the
+system at once, so the process can look bigger than what it keeps.
 
 ## Documents
 
