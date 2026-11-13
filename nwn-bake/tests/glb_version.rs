@@ -17,8 +17,8 @@
 //!
 //! The textures are encoded by a stand-in (the texels behind a small header), so the test needs no WebP; a change to the WebP
 //! settings must raise the version all the same. The `.glb` is compared without `asset.generator` (it names the crate's version),
-//! the manifest without `renderer.version` and `renderer.commit`. Recorded on x86-64 Linux; on another platform float results may
-//! differ, so the test says it is skipped there.
+//! the manifest without `renderer.version`, `renderer.commit` and the `.glb`'s length and SHA-256 (which take in the generator).
+//! Recorded on x86-64 Linux; on another platform float results may differ, so the test says it is skipped there.
 
 #[path = "support/fixture.rs"]
 mod fixture;
@@ -81,6 +81,11 @@ fn digests(f: &fixture::Fixture, out: &Path) -> BTreeMap<String, String> {
         let r = m["renderer"].as_object_mut().unwrap();
         r.remove("version");
         r.remove("commit");
+        // The manifest's `glb` holds the .glb's length and SHA-256, which take in the generator (the crate's version); the .glb
+        // itself is compared above without it.
+        let g = m["glb"].as_object_mut().unwrap();
+        g.remove("bytes");
+        g.remove("sha256");
         d.insert(format!("{name}/manifest"), sha256(&serde_json::to_vec(&m).unwrap()));
         let mut textures = Vec::new();
         for t in &baked.manifest.textures {
