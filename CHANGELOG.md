@@ -4,7 +4,7 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
-## Unreleased
+## 0.3.0 (2026-11-13)
 
 - **Memory: `--cache-mb <MiB>` and `NWN_BAKE_CACHE_MB`**, on every command that opens the game, `serve` included: what the
   model and texture caches keep between uses, a quarter for models and the rest for textures (default 4096, as before: 1 GiB and
@@ -16,6 +16,8 @@ version (`PICTURES_VERSION`), which changes whenever a picture would.
   `game::open` keeps a budget of its own per game, as before. `Game::cache_budget`; `Game::set_cache_limits` now sets its budget's
   limits (shared by every game in it) and drops what is kept beyond them at once. `iso::batch::Service::cache`, the budget its
   games share.
+- `deny.toml` also allows `https://github.com/plenarius/nwn-bake` as a git source, so programs that take nwn-bake from git at a
+  release tag can share the file word for word.
 
 ## 0.2.0 (2026-11-12)
 
