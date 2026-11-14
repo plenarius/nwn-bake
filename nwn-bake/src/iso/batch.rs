@@ -943,6 +943,10 @@ pub fn lines_of(m: &Value) -> Vec<Value> {
     for k in ["format", "version", "renderer", "area", "inputs", "resources", "key", "quick_key", "options", "roof_cut_m", "notes"] {
         base.insert(k.into(), m[k].clone());
     }
+    // (Only a close-up has it, and the lines of the others stay as they were.)
+    if let Some(r) = m.get("region_m") {
+        base.insert("region_m".into(), r.clone());
+    }
     m["views"]
         .as_array()
         .into_iter()
@@ -1025,6 +1029,10 @@ pub struct AreaRequest {
     pub format: Option<String>,
     /// Calibration constants that differ from the default ([`super::Look`]'s fields).
     pub look: Option<Value>,
+    /// Only this rectangle of the ground, `[x0, y0, x1, y1]` in metres, two opposite corners ([`IsoOptions::region`]).
+    pub region: Option<[f32; 4]>,
+    /// Rings over the pictures, each `"X,Y"` or `"X,Y,#rrggbb"` as `--mark` takes it ([`IsoOptions::marks`]).
+    pub marks: Option<Vec<String>>,
     /// The output folder; without it nothing is written and only the keys are worked out.
     pub out: Option<PathBuf>,
     /// `tree` (the default: `webp/<view>/<area>.webp`, `json/<area>.json`) or `flat` (side by side).
@@ -1090,6 +1098,12 @@ impl AreaRequest {
             o.background = super::parse_background(b)?;
         }
         o.depth = self.depth.unwrap_or(false);
+        if let Some([x0, y0, x1, y1]) = self.region {
+            o.region = Some(super::Region::new([x0, y0], [x1, y1]).context("region")?);
+        }
+        for m in self.marks.iter().flatten() {
+            o.marks.push(super::Mark::parse(m)?);
+        }
         if let Some(l) = &self.look {
             o.look = serde_json::from_value(l.clone()).context("look: not a look")?;
         }

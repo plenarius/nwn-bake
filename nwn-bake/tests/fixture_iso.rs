@@ -300,3 +300,107 @@ fn every_manifest_written_validates_against_the_schema() {
     assert!(errors(&v, &m).is_empty());
     let _ = std::fs::remove_dir_all(&f.base);
 }
+
+/// Whether any pixel of a picture is the fixture's red marker (red over green and blue, as the marker's texture is drawn).
+fn shows_red(p: &Picture) -> bool {
+    p.rgba.as_chunks::<4>().0.iter().any(|c| c[3] > 0 && c[0] > 120 && c[1] < 60 && c[2] < 60)
+}
+
+#[test]
+fn a_region_draws_only_its_rectangle_and_its_matrix_still_finds_the_marker() {
+    let f = fixture::write(&fixture::dir("region"));
+    let g = open(&f);
+    let s = scene_of(&g, &f, "fx_mark");
+    let o = IsoOptions { views: ALL.to_vec(), shadows: false, exposure: false, ..Default::default() };
+    let whole = iso::render(&s, &o).unwrap();
+    // The marker's 5 m square, its corners given north-east first.
+    let around = iso::region::Region::parse("15,10,10,5").unwrap();
+    let r = iso::render(&s, &IsoOptions { region: Some(around), ..o.clone() }).unwrap();
+    assert_eq!(r.region, Some(around));
+    let at = [fixture::MARKER[0], fixture::MARKER[1], fixture::MARKER_UP];
+    for (p, w) in r.pictures.iter().zip(&whole.pictures) {
+        assert!(p.width < w.width / 2 && p.height < w.height, "{:?}: {}x{} of {}x{}", p.view, p.width, p.height, w.width, w.height);
+        let c = pixel(p, at);
+        assert!(c[3] == 255 && c[0] > 120 && c[1] < 60, "{:?}: the marker is {c:?}", p.view);
+    }
+    // Straight down, the picture is the rectangle at the scale, with the padding (4 pixels: 8 samples at supersampling 2) around.
+    let top = &r.pictures[4];
+    assert_eq!((top.width, top.height), (5 * 8 + 8, 5 * 8 + 8));
+    assert_eq!(top.transform.project([10.0, 10.0, 0.0]), [4.0, 4.0]);
+    assert_eq!(pixel(top, [9.6, 7.0, 0.0])[3], 0, "west of the rectangle: nothing");
+    assert_eq!(pixel(top, [10.4, 7.0, 0.0])[3], 255, "inside it: the grass");
+    // A rectangle beside the marker: the marker, standing outside it, shows in no view.
+    let beside = iso::region::Region::parse("14,5,19,10").unwrap();
+    for p in &iso::render(&s, &IsoOptions { region: Some(beside), ..o.clone() }).unwrap().pictures {
+        assert!(!shows_red(p), "{:?}: the marker leaks into the picture", p.view);
+    }
+    // Clamped to the area; outside it, an error.
+    let past = iso::render(&s, &IsoOptions { region: Some(iso::region::Region::parse("-5,-5,4,3").unwrap()), ..o.clone() }).unwrap();
+    assert_eq!(past.region, Some(iso::region::Region::parse("0,0,4,3").unwrap()));
+    let outside = IsoOptions { region: Some(iso::region::Region::parse("40,0,50,10").unwrap()), ..o.clone() };
+    assert!(format!("{:#}", iso::render(&s, &outside).err().unwrap()).contains("outside the area"));
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
+fn a_mark_is_a_ring_over_everything_in_every_view() {
+    let f = fixture::write(&fixture::dir("marks"));
+    let g = open(&f);
+    let s = scene_of(&g, &f, "fx_mark");
+    let o = IsoOptions { views: ALL.to_vec(), ..Default::default() };
+    let plain = iso::render(&s, &o).unwrap();
+    // One ring on the open grass in the default colour, one green ring around the marker.
+    let marks = vec![iso::region::Mark::parse("5,5").unwrap(), iso::region::Mark::parse("12.5,7.5,#00ff00").unwrap()];
+    let r = iso::render(&s, &IsoOptions { marks, ..o.clone() }).unwrap();
+    for (p, q) in r.pictures.iter().zip(&plain.pictures) {
+        assert_eq!((p.width, p.height, &p.transform), (q.width, q.height, &q.transform), "{:?}: marks change no frame", p.view);
+        // On the ring (1.5 m from its centre, on the ground) its colour; in its middle the grass as without it.
+        for (centre, colour) in [([5.0, 5.0], [255, 0, 255, 255]), ([12.5, 7.5], [0, 255, 0, 255])] {
+            for (dx, dy) in [(1.5, 0.0), (0.0, -1.5), (-1.5, 0.0), (0.0, 1.5)] {
+                assert_eq!(pixel(p, [centre[0] + dx, centre[1] + dy, 0.0]), colour, "{:?}: the ring about {centre:?}", p.view);
+            }
+        }
+        assert_eq!(pixel(p, [5.0, 5.0, 0.0]), pixel(q, [5.0, 5.0, 0.0]), "{:?}: the ring's middle", p.view);
+        assert_ne!(pixel(p, [8.0, 5.0, 0.0]), [255, 0, 255, 255], "{:?}: outside the ring", p.view);
+        // Seen from above, the marker shows inside its ring as it does without it. (From a corner the ring's far side, drawn on
+        // top, crosses the marker 1 m over the ground.)
+        if p.view == View::Top {
+            let at = [fixture::MARKER[0], fixture::MARKER[1], fixture::MARKER_UP];
+            assert_eq!(pixel(p, at), pixel(q, at), "the marker");
+        }
+    }
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
+fn a_close_up_s_manifest_has_its_region_and_marks_and_validates() {
+    let f = fixture::write(&fixture::dir("closeup"));
+    let g = open(&f);
+    let source = ModuleSource::open(&f.module_mod()).unwrap();
+    let files = source.area("fx_mark").unwrap();
+    let scene = nwn_bake::area::scene(&g, &files, &SceneOptions::default()).unwrap();
+    let o = IsoOptions {
+        views: vec![View::Sw, View::Top],
+        region: Some(iso::region::Region::parse("8,12,-4,4").unwrap()),
+        marks: vec![iso::region::Mark::parse("3,7,#FF8000").unwrap(), iso::region::Mark::parse("4,7").unwrap()],
+        ..Default::default()
+    };
+    let rendered = iso::render(&scene, &o).unwrap();
+    let out = OutOptions::new(f.base.join("out"));
+    let inputs = Inputs::of(&files, &fixture::HAKS.map(String::from), &[], None).unwrap();
+    iso::write(&scene, None, inputs, &rendered, &o, &out).unwrap();
+    let m: serde_json::Value = serde_json::from_slice(&std::fs::read(out.dir.join("fx_mark.json")).unwrap()).unwrap();
+    let errs = errors(&schema(), &m);
+    assert!(errs.is_empty(), "{errs:#?}\n{m:#}");
+    assert_eq!(m["options"]["region"], serde_json::json!([-4.0, 4.0, 8.0, 12.0]));
+    assert_eq!(m["region_m"], serde_json::json!([0.0, 4.0, 8.0, 12.0]));
+    assert_eq!(
+        m["options"]["marks"],
+        serde_json::json!([{"at": [3.0, 7.0], "colour": "#ff8000"}, {"at": [4.0, 7.0], "colour": "#ff00ff"}])
+    );
+    // A picture without them has neither field, so its manifest and keys are as before.
+    let plain = IsoOptions { views: vec![View::Top], ..Default::default() };
+    let info = serde_json::to_value(iso::OptionsInfo::of(&plain, true, iso::Format::Png)).unwrap();
+    assert!(info.get("region").is_none() && info.get("marks").is_none(), "{info}");
+    let _ = std::fs::remove_dir_all(&f.base);
+}

@@ -109,6 +109,8 @@ line per area and view) and `index.json`.
 | `--exposure auto\|off` | `auto` | Dark areas lifted |
 | `--objects on\|off` | `on` | Placeables and doors |
 | `--depth` | | Also a 16-bit height picture per view |
+| `--region X0,Y0,X1,Y1` | | Only this rectangle of the ground (game metres, any two opposite corners) and what stands on it, clamped to the area. One area only |
+| `--mark X,Y[,#rrggbb]` | magenta | A ring 1.5 m in radius on the ground at this game point, over everything, in every view; repeatable. One area only |
 | `--layout flat\|tree` | `tree` with `--all` | Files side by side, or in folders by kind and view |
 | `--name '{area}.{view}.{ext}'` | | File names, for `flat` |
 | `--jobs N` | half the cores (`NWN_BAKE_JOBS`) | Threads |
@@ -127,6 +129,15 @@ failed, and 2 on misuse (an unknown option, a value that does not parse).
 ```sh
 nwn-bake area-iso mymodule.mod village --view all,top --out pictures/
 nwn-bake area-iso ~/projects/mymodule --all --out pictures --cache pictures-cache --jobs 4
+```
+
+`--region` and `--mark` draw a close-up of one change: here a placeable moved from (41.2, 17.5) to (43.0, 18.1), its old place
+ringed in orange and its new one in green, 30 m around it at 24 pixels a metre. Only the rectangle's triangles are drawn, so a
+close-up of a large area takes a fraction of the whole area's time.
+
+```sh
+nwn-bake area-iso mymodule.mod village --region 27,3,57,33 --mark 41.2,17.5,#ff8000 --mark 43,18.1,#00e040 \
+    --view sw,top --scale 24 --out closeup/
 ```
 
 `--look` tries other values for the constants that set the look without a build. The file lists only the constants it changes

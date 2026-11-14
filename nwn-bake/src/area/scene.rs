@@ -228,6 +228,13 @@ fn area_size(are: &mg_gff::Struct) -> Result<(usize, usize)> {
     Ok((side("Width")?, side("Height")?))
 }
 
+/// The area's size in metres along x and y (its `Width` and `Height` times 10 m), from its `.are` alone. Fails as [`scene()`] does
+/// on a size past [`MAX_TILES`].
+pub fn size_of(area: &AreaFiles) -> Result<[f32; 2]> {
+    let (w, h) = area_size(&area.are.root).with_context(|| format!("{}: its size", area.resref))?;
+    Ok([w as f32 * TILE, h as f32 * TILE])
+}
+
 /// The `.are`'s `Tile_List`, row by row from the south-west, as the game reads it (as Moonglow's `mg_area::AreaModel` does; that
 /// crate is not used here because it brings the GPU renderer with it). What is odd is noted; a list of another length than
 /// `Width` by `Height` fails.

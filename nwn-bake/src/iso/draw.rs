@@ -118,7 +118,8 @@ pub(super) fn frame(prep: &Prepared, camera: &Camera) -> Frame {
     }
     if lo[0] > hi[0] {
         let [sx, sy] = prep.size;
-        for p in [[0.0, 0.0, 0.0], [sx, 0.0, 0.0], [0.0, sy, 0.0], [sx, sy, 0.0]] {
+        let corners = prep.region.map_or([[0.0, 0.0, 0.0], [sx, 0.0, 0.0], [0.0, sy, 0.0], [sx, sy, 0.0]], |r| r.ground(0.0));
+        for p in corners {
             let q = camera.project(camera.turn(p), scale);
             lo = [lo[0].min(q[0]), lo[1].min(q[1])];
             hi = [hi[0].max(q[0]), hi[1].max(q[1])];
@@ -154,7 +155,21 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
         .collect();
     let water: Vec<[[f32; 3]; 3]> = water.iter().map(|t| t.map(|p| camera.turn(p))).collect();
     let (cam, l) = (camera.cam, camera.light);
-    let shadows = o.shadows.then(|| Shadows::new(&tris, l, scale, look, look.alpha_cut));
+    // (A region's shadows are cast by what stands around it as well, so a tree 5 m outside it still shades its ground.)
+    let casters: Option<Vec<DrawTri<'_>>> = prep.casters.as_ref().filter(|_| o.shadows).map(|c| {
+        c.iter()
+            .filter(|t| !is_void(t))
+            .map(|t| DrawTri {
+                p: t.p.map(|p| camera.turn(p)),
+                uv: t.uv,
+                texture: t.texture,
+                tex: prep.textures.get(t.texture as usize).and_then(|x| x.image.as_deref()),
+                chasm: None,
+            })
+            .collect()
+    });
+    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), l, scale, look, look.alpha_cut));
+    drop(casters);
     let bias = shadows.as_ref().map_or(look.shadow_bias, |s| look.shadow_bias.max(2.0 * s.cell));
     let project = |p: [f32; 3]| camera.project(p, scale);
     let Frame { lo, hi, w, h } = frame(prep, &camera);
@@ -300,6 +315,14 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
         }
     }
     note_white(&prep.textures, &colour, &alpha, &owner, camera.view, notes);
+    // The marks, on top of everything, after the exposure so their colours are the ones asked for.
+    for &(at, rgb) in &prep.marks {
+        let to_samples = |p: [f32; 3]| {
+            let q = project(camera.turn(p));
+            [sx(&q), sy(&q)]
+        };
+        super::region::draw_ring(&mut colour, &mut alpha, w, h, ss, to_samples, at, o.scale, rgb);
+    }
 
     // Averaged down from the supersampled picture: colour weighted by coverage, then over the background.
     let (ow, oh) = (w / ss, h / ss);

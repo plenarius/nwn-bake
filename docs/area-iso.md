@@ -67,7 +67,8 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
   below). `quick_key` is null when the run made no quick keys (named areas with no `--cache`).
 - `options`: the options in effect. `quality` is the supersampling, set with `--supersample`. `roof` is `"auto"`, `"keep"` or the
   metres over the floor given; `look` is `"default"`, or the whole set of calibration constants when `--look` changed any;
-  `format` is `"webp"` or `"png"`, with `webp_quality` for WebP; `depth` whether there are depth pictures.
+  `format` is `"webp"` or `"png"`, with `webp_quality` for WebP; `depth` whether there are depth pictures; `region` and `marks`
+  the close-up's rectangle and rings, left out without them (see "Close-ups and marks").
 - `roof_cut_m`: the height (metres) above which everything was cut away, or null when the roof was kept. Interiors and underground
   areas are cut 3.5 m over their median floor, or, when they are a cave dug out of rock (more than a quarter of the ground at the top,
   at least 8% drawn floor 2 m or more under it), 1 to 2 m over their highest floor.
@@ -88,6 +89,28 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 - `notes`: what could not be read or looked wrong: a tileset's absent sections, missing models and textures, haks not found, a texture
   drawn nearly white over much of a picture.
 
+## Close-ups and marks
+
+`--region X0,Y0,X1,Y1` draws one rectangle of the ground instead of the whole area: two opposite corners in game metres (as the
+`.git`'s `XPosition` and `YPosition`), in any order. The scene is cut along the rectangle's four sides as a column, from the lowest
+ground to the highest roof: the pictures show the rectangle's ground and what stands on it, and nothing that stands outside it,
+in front of it or behind it. Each view's frame is the column's, at `--scale`, with the same padding as a whole area's; `matrix`
+maps game points to the pixels of this picture as for a whole area. Only the triangles over the rectangle are drawn, and what
+casts shadows is cut to the rectangle grown by 30 m on each side, so a tree 5 m outside it still shades it. The exposure is
+measured on the close-up, so a close-up can be a little brighter or darker than the same place in the whole area's picture.
+
+The rectangle is clamped to the area; one with no part in the area is misuse (exit code 2). The manifest's `options.region` is the
+rectangle as asked for, south-west corner first, and the top-level `region_m` the rectangle drawn (clamped). Both are left out
+without `--region`.
+
+`--mark X,Y[,#rrggbb]` (repeatable) draws a ring on top of each picture: 1.5 m in radius (at least 8 pixels), centred on the game
+point at the ground's height there (the floor probe's, the walkmesh's top, so not on a roof or a table), a band 3 pixels wide in
+the colour given (magenta, `#ff00ff`, by default) between two dark outlines of 1.5 pixels. Nothing covers it: it is drawn after the
+scene and the exposure, so its colour is the one asked for. A ring is drawn wherever it lands in the frame, outside the region
+too. The depth pictures do not show the rings. The manifest's `options.marks` lists them, as `{"at": [x, y], "colour": "#rrggbb"}`.
+
+`--region` and `--mark` take one area: with `--all` or several areas they are misuse. Both are part of the options, so of the keys.
+
 ## Game coordinates and pixels
 
 - Game coordinates are metres as in the `.git`: x east, y north, z up, the area's south-west corner at (0, 0).
@@ -107,7 +130,8 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 One JSON object a line, one line per area and view, in resref and view order (`area-iso-line.schema.json`). What a reader needs first
 is at the top: `resref`, `view`, `path` (the picture, relative to the folder), `width`, `height`, `bytes`, `status` (`ok`) and
 `transform` (`view`, `elevation_deg`, `scale`, `width`, `height`, `rotation`, `offset`, `matrix`). Then the area's manifest without
-its `views` (`format`, `version`, `renderer`, `area`, `inputs`, `resources`, `key`, `quick_key`, `options`, `roof_cut_m`, `notes`),
+its `views` (`format`, `version`, `renderer`, `area`, `inputs`, `resources`, `key`, `quick_key`, `options`, `roof_cut_m`, `notes`,
+and `region_m` for a close-up),
 and the view's own entry as `view_entry`. An area that failed keeps the lines of the pictures it already had; one with none has a
 line per view with `status` `failed`, `version` 1 and the `error` (a reader that takes the last `ok` line of each area and view
 ignores those). The file is written whole, and only when it changes.
@@ -120,7 +144,7 @@ Every area has two keys, SHA-256 in hex after `sha256:`. Both start from the sam
   (`renderer.pictures`, the constant `nwn_bake::iso::PICTURES_VERSION`). Not the crate's version or the build's commit: a new build
   that draws the same pictures keeps every key, so a release of nwn-bake does not draw every area again;
 - the options in effect, as the manifest's `options` (scale, quality, light, shadows, roof, exposure, objects, background, look,
-  format and WebP quality, depth) and the views asked for, in order;
+  format and WebP quality, depth, and the region and marks when there are any) and the views asked for, in order;
 - the area's resref and its `inputs` (the `.are` and `.git` as binary GFF, so a `.mod` and its nasher JSON give the same; the haks
   asked for, in order; the haks not found; the talk table's name).
 
