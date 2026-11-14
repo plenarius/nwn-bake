@@ -512,7 +512,6 @@ pub fn bake_placeable(
 
 /// Writes `preview` as one scene into `out`: `scene.json` (the fields of `about`, then `animation`, `t`, `meshes` and `emitters`) and its
 /// textures in `tex/`. `no_model` is the error when the preview has no base model.
-#[allow(clippy::too_many_arguments)]
 fn bake_scene(
     game: &GameData,
     gpu: &Gpu,
