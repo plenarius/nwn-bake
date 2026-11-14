@@ -395,6 +395,23 @@ enum Cmd {
         #[command(flatten)]
         game: CharGame,
     },
+    /// A placeables.2da row as one scene, textures replaced: scene.json and tex/ in OUT_DIR, as `creature` writes a character's
+    Placeable {
+        /// The placeables.2da row
+        row: u32,
+        out_dir: PathBuf,
+        /// The animation it is posed in [default: the model's idle animation, else `default`]
+        #[arg(long, value_name = "NAME")]
+        anim: Option<String>,
+        /// How far into the animation, in seconds
+        #[arg(long, value_name = "SECONDS", default_value_t = 0.0)]
+        t: f32,
+        /// A texture replaced by another; any number of times
+        #[arg(long = "tex", value_name = "OLD=NEW", value_parser = parse_tex)]
+        tex: Vec<(String, String)>,
+        #[command(flatten)]
+        game: CharGame,
+    },
     /// Every placeables.2da row with a model: where it comes from, its size, particles, light and textures (JSON)
     Placeables {
         /// The JSON file to write
@@ -774,6 +791,14 @@ fn run(command: Cmd) -> Result<i32> {
             if !missing.is_empty() {
                 note!("missing models: {missing:?}");
             }
+        }
+        Cmd::Placeable { row, out_dir, anim, t, tex, game } => {
+            let game = open_game(&game)?;
+            let baked = nwn_bake::creature::bake_placeable(&game, &gpu()?, row, &tex, &out_dir, anim.as_deref(), t)?;
+            if !baked.missing_models.is_empty() {
+                note!("missing models: {:?}", baked.missing_models);
+            }
+            note!("{} meshes, {} emitters, {} textures", baked.meshes, baked.emitters, baked.textures);
         }
         Cmd::Scene { spec, out, items, game } => {
             let spec = read_scene(&spec)?;
@@ -1271,12 +1296,35 @@ mod tests {
     }
 
     #[test]
+    fn placeable_takes_a_row_its_textures_and_a_pose() {
+        let parse = |args: &[&str]| Cli::try_parse_from(std::iter::once("nwn-bake").chain(args.iter().copied())).map(|c| c.command);
+        match parse(&["placeable", "1572", "out", "--tex", "plc_a=plc_b", "--tex", "c=d", "--anim", "on", "--t", "1.5"]).unwrap() {
+            Cmd::Placeable { row, out_dir, anim, t, tex, .. } => {
+                assert_eq!((row, out_dir, anim.as_deref(), t), (1572, PathBuf::from("out"), Some("on"), 1.5));
+                assert_eq!(tex, [("plc_a".to_string(), "plc_b".to_string()), ("c".into(), "d".into())]);
+            }
+            _ => panic!("not placeable"),
+        }
+        // The model's own idle animation unless one is named; no textures replaced unless asked.
+        match parse(&["placeable", "28", "out"]).unwrap() {
+            Cmd::Placeable { anim, t, tex, .. } => assert!(anim.is_none() && t == 0.0 && tex.is_empty()),
+            _ => panic!("not placeable"),
+        }
+        // A row is a number: misuse, before the game is opened.
+        assert!(parse(&["placeable", "portal", "out"]).is_err());
+    }
+
+    #[test]
     fn every_command_that_opens_a_game_takes_the_caches_limit() {
         let parse = |args: &[&str]| Cli::try_parse_from(std::iter::once("nwn-bake").chain(args.iter().copied()));
         let mb = CacheLimits::total_mib(64).unwrap();
         let game_args = |cmd: Cmd| -> GameArgs {
             match cmd {
-                Cmd::Serve { game } | Cmd::Thumb { game, .. } | Cmd::Creature { game, .. } | Cmd::Scene { game, .. } => game.game,
+                Cmd::Serve { game }
+                | Cmd::Thumb { game, .. }
+                | Cmd::Creature { game, .. }
+                | Cmd::Placeable { game, .. }
+                | Cmd::Scene { game, .. } => game.game,
                 Cmd::AreaIso(a) => a.game,
                 Cmd::Area3d(a) => a.game,
                 Cmd::AreaScene(a) => a.game,
@@ -1287,6 +1335,7 @@ mod tests {
             &["serve"][..],
             &["thumb", "a.utc", "b.png"],
             &["creature", "a.bic", "out"],
+            &["placeable", "7", "out"],
             &["scene", "a.json", "b.png"],
             &["area-iso", "m.mod", "a", "--out", "o"],
             &["area-3d", "m.mod", "a", "--out", "o"],

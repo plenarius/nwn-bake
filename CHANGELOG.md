@@ -4,6 +4,14 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## Unreleased
+
+- **`placeable`: a placeables.2da row as one scene** (`scene.json` and `tex/`, as `creature` writes a character's), for a web page that
+  draws furniture in 3D: the model as a placed piece shows it (`placeable-thumb`'s), in its idle animation unless `--anim` says
+  otherwise, with `--tex OLD=NEW` replacements (the furniture catalogue's styles). The scene names the row, its model and its name
+  (the row's StrRef, else its label). Library: `creature::bake_placeable`; `bake_creature` and it share the scene writer, and a
+  creature's `scene.json` is as before.
+
 ## 0.3.0 (2026-11-13)
 
 - **Memory: `--cache-mb <MiB>` and `NWN_BAKE_CACHE_MB`**, on every command that opens the game, `serve` included: what the

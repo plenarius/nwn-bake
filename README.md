@@ -204,6 +204,7 @@ placeable's textures, scenes (`scene`), and areas (`area_iso`, `area_iso_key`). 
 | Command | |
 |---|---|
 | `creature <file.bic\|.utc> <out-dir> [--anim name] [--t seconds] [--items dir]` | A character as one scene (`scene.json`, `tex/*.png`) |
+| `placeable <row> <out-dir> [--anim name] [--t seconds] [--tex old=new]...` | A placeables.2da row as one scene, as `creature` writes a character's (`scene.json` with `name`, `row` and `model`, `tex/`) |
 | `describe <file.bic\|.utc>` | A character as a list of parts (JSON) |
 | `look <file.bic\|.utc> <parts-dir>` | `describe`, and writes the parts, textures and palettes the folder does not have |
 | `part <spec.json> <out>` | One part's meshes, as `look` writes them (the spec: below) |

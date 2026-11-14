@@ -464,13 +464,68 @@ pub struct Baked {
 pub fn bake_creature(game: &GameData, gpu: &Gpu, gff_bytes: &[u8], items: &Items, out: &Path, anim: &str, t: f32) -> Result<Baked> {
     let gff = Gff::read(gff_bytes)?;
     let (mut preview, missing_items) = dressed(game, &gff, items)?;
-    std::fs::create_dir_all(out.join("tex"))?;
     // A held weapon's visual effect (its flames, its sparks), which Moonglow does not compose.
     let effects = crate::emitters::weapon_effects(game, &gff.root, &preview);
     preview.parts.extend(effects);
+    let nm = |l: &str| gff.root.locstring(l).and_then(|s| game.locstring(s)).unwrap_or_default();
+    let name = format!("{} {}", nm("FirstName"), nm("LastName")).trim().to_string();
+    let level: i64 = gff.root.list("ClassList").unwrap_or(&[]).iter().filter_map(|c| c.integer("ClassLevel")).sum();
+    let race = game
+        .table("racialtypes")
+        .ok()
+        .and_then(|t| game.string(mg_core::StrRef(t.get_int(gff.root.integer("Race")? as usize, "Name")? as u32)))
+        .unwrap_or_default();
+    let about = json!({ "name": name, "race": race, "level": level });
+    let mut baked = bake_scene(game, gpu, &preview, out, anim, t, about, "the creature has no base model")?;
+    baked.missing_items = missing_items;
+    Ok(baked)
+}
+
+/// Bakes placeables.2da row `row` into `out` (`scene.json`, `tex/`) as [`bake_creature`] does a creature: the model a placed piece of
+/// furniture shows ([`placeable_preview`]: its environment map, `textures` (old name, new name) drawn instead of the model's, as the
+/// furniture catalogue's styles), in animation `anim` (None: the model's idle animation, else `default`) at `t` seconds. The scene names
+/// the row (`row`), its model (`model`) and its name (`name`: the row's StrRef, else its label). A row whose model has no meshes (a piece
+/// made only of particles) bakes with no meshes; a row with no model is an error.
+pub fn bake_placeable(
+    game: &GameData,
+    gpu: &Gpu,
+    row: u32,
+    textures: &[(String, String)],
+    out: &Path,
+    anim: Option<&str>,
+    t: f32,
+) -> Result<Baked> {
+    let preview = placeable_preview(game, row, textures)?;
+    let anim = anim.map(str::to_string).or_else(|| preview.idle.clone()).unwrap_or_else(|| "default".into());
+    let table = game.table("placeables").ok();
+    let cell = |c: &str| table.as_ref().and_then(|t| t.get(row as usize, c)).map(str::trim).filter(|v| !v.is_empty() && *v != "****");
+    let name = cell("StrRef")
+        .and_then(|v| v.parse::<u32>().ok())
+        .and_then(|s| game.string(mg_core::StrRef(s)))
+        .filter(|s| !s.trim().is_empty())
+        .or_else(|| cell("Label").map(|l| l.trim_matches('"').to_string()))
+        .unwrap_or_default();
+    let model = crate::placeable_model(game, row as usize).ok();
+    let about = json!({ "name": name, "row": row, "model": model });
+    bake_scene(game, gpu, &preview, out, &anim, t, about, "the placeable has no model")
+}
+
+/// Writes `preview` as one scene into `out`: `scene.json` (the fields of `about`, then `animation`, `t`, `meshes` and `emitters`) and its
+/// textures in `tex/`. `no_model` is the error when the preview has no base model.
+fn bake_scene(
+    game: &GameData,
+    gpu: &Gpu,
+    preview: &mg_preview::Preview,
+    out: &Path,
+    anim: &str,
+    t: f32,
+    about: serde_json::Value,
+    no_model: &'static str,
+) -> Result<Baked> {
+    std::fs::create_dir_all(out.join("tex"))?;
     let loader = Loader::new(game);
     let load = |n: &str| loader.load(n);
-    let composed = mg_preview::compose::Composed::new(gpu, &preview, &load).context("the creature has no base model")?;
+    let composed = mg_preview::compose::Composed::new(gpu, preview, &load).context(no_model)?;
     let mut tex_files: HashMap<String, Option<(String, bool)>> = HashMap::new();
     let mut meshes = Vec::new();
     for inst in composed.instances(Some(anim), t, Mat4::IDENTITY) {
@@ -628,25 +683,21 @@ pub fn bake_creature(game: &GameData, gpu: &Gpu, gff_bytes: &[u8], items: &Items
             emitters.push(e);
         }
     }
-    let nm = |l: &str| gff.root.locstring(l).and_then(|s| game.locstring(s)).unwrap_or_default();
-    let name = format!("{} {}", nm("FirstName"), nm("LastName")).trim().to_string();
-    let level: i64 = gff.root.list("ClassList").unwrap_or(&[]).iter().filter_map(|c| c.integer("ClassLevel")).sum();
-    let race = game
-        .table("racialtypes")
-        .ok()
-        .and_then(|t| game.string(mg_core::StrRef(t.get_int(gff.root.integer("Race")? as usize, "Name")? as u32)))
-        .unwrap_or_default();
-    std::fs::write(
-        out.join("scene.json"),
-        serde_json::to_vec(
-            &json!({ "name": name, "race": race, "level": level, "animation": anim, "t": t, "meshes": meshes, "emitters": emitters }),
-        )?,
-    )?;
+    let (n_meshes, n_emitters) = (meshes.len(), emitters.len());
+    let mut scene = match about {
+        serde_json::Value::Object(m) => m,
+        _ => serde_json::Map::new(),
+    };
+    scene.insert("animation".into(), json!(anim));
+    scene.insert("t".into(), json!(t));
+    scene.insert("meshes".into(), serde_json::Value::Array(meshes));
+    scene.insert("emitters".into(), serde_json::Value::Array(emitters));
+    std::fs::write(out.join("scene.json"), serde_json::to_vec(&scene)?)?;
     Ok(Baked {
-        meshes: meshes.len(),
-        emitters: emitters.len(),
+        meshes: n_meshes,
+        emitters: n_emitters,
         textures: tex_files.len(),
         missing_models: loader.missing(&composed.missing),
-        missing_items,
+        missing_items: Vec::new(),
     })
 }
