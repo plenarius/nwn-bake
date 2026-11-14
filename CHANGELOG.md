@@ -4,7 +4,7 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
-## Unreleased
+## 0.5.0 (2026-11-14)
 
 - **`area-iso --region X0,Y0,X1,Y1` and `--mark X,Y[,#rrggbb]`: a close-up of one change.** `--region` draws one rectangle of the
   ground (game metres) and what stands on it, cut out of the scene as a column, so nothing outside it leaks into the picture and

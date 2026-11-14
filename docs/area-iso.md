@@ -34,7 +34,7 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 {
   "format": "nwn-bake/area-iso",
   "version": 1,
-  "renderer": { "name": "nwn-bake", "version": "0.4.0", "commit": "abc1234", "pictures": 1 },
+  "renderer": { "name": "nwn-bake", "version": "0.5.0", "commit": "abc1234", "pictures": 1 },
   "area": { "resref": "village", "name": "The Village", "tileset": "ttr01", "tiles": [8, 8], "size_m": [80.0, 80.0], "kind": "surface" },
   "inputs": { "are": "sha256:...", "git": "sha256:...", "haks": ["hak_a", "hak_b"], "missing_haks": [], "tlk": "mytlk" },
   "resources": null,

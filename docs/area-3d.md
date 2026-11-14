@@ -238,7 +238,7 @@ glTF texture (their materials stay apart).
 {
   "format": "nwn-bake/area-3d",
   "version": 2,
-  "renderer": { "name": "nwn-bake", "version": "0.4.0", "commit": "abc1234", "glb": 2 },
+  "renderer": { "name": "nwn-bake", "version": "0.5.0", "commit": "abc1234", "glb": 2 },
   "key": "sha256:...",
   "area": { "resref": "town_square", "name": "Town Square", "tileset": "tcn01", "tiles": [16, 16], "size_m": [160.0, 160.0], "flags": 4,
             "kind": "surface", "light": { "ambient": [80, 80, 80], "diffuse": [200, 200, 200] } },
