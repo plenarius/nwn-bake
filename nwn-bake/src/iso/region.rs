@@ -7,7 +7,7 @@
 //! A region is cut out of the scene as a column: every triangle is cut along the rectangle's four sides and only what stands over
 //! the rectangle is drawn, so the picture is the rectangle's ground and what stands on it, and nothing in front of it or behind it
 //! leaks in. The views' frames are then the column's, so a 30 m square of a 320 m area is drawn at the full scale without drawing
-//! the rest. The shadows are cast by what stands within [`SHADOW_MARGIN`] of the rectangle too, so a tree just outside still
+//! the rest. The shadows are cast by what stands within [`SHADOW_MARGIN`] of the rectangle too, so a tree 5 m outside still
 //! shades the ground in it.
 //!
 //! The pull requests of a module change one placeable or door at a time; a mark rings where it stood and where it stands now, on

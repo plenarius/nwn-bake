@@ -1416,7 +1416,11 @@ mod tests {
         else {
             panic!("not area-iso")
         };
-        assert_eq!((a.region.map(|r| r.corners()), a.marks.len()), (Some([-5.0, -5.0, 10.0, 10.0]), 2), "negative corners are numbers");
+        assert_eq!(
+            (a.region.map(nwn_bake::iso::region::Region::corners), a.marks.len()),
+            (Some([-5.0, -5.0, 10.0, 10.0]), 2),
+            "negative corners are numbers"
+        );
         let Cmd::AreaIso(a) = parse(&["area-iso", "m.mod", "a", "--out", "o", "--shadows", "off", "--exposure", "off"]).unwrap().command
         else {
             panic!("not area-iso")

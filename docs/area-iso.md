@@ -96,7 +96,7 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 ground to the highest roof: the pictures show the rectangle's ground and what stands on it, and nothing that stands outside it,
 in front of it or behind it. Each view's frame is the column's, at `--scale`, with the same padding as a whole area's; `matrix`
 maps game points to the pixels of this picture as for a whole area. Only the triangles over the rectangle are drawn, and what
-casts shadows is cut to the rectangle grown by 30 m on each side, so a tree just outside it still shades its ground. The exposure is
+casts shadows is cut to the rectangle grown by 30 m on each side, so a tree 5 m outside it still shades it. The exposure is
 measured on the close-up, so a close-up can be a little brighter or darker than the same place in the whole area's picture.
 
 The rectangle is clamped to the area; one with no part in the area is misuse (exit code 2). The manifest's `options.region` is the

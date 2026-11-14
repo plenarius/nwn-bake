@@ -118,7 +118,8 @@ or JSON; `git` defaults to the one beside the `.are`), with `haks` and `tlk` (el
 The options are `area-iso`'s, by the same names (but `quality`, the supersampling, which is `--supersample` there) and with the same
 defaults: `views` (a list, or `"all,top"`), `scale`, `quality`, `light`, `shadows` (true or false), `roof`, `exposure`, `objects`,
 `background`, `depth`, `format`, `look` (the constants that differ, as an object), `region` (`[x0, y0, x1, y1]`), `marks` (a list
-of strings as `--mark` takes them, `"41.2,17.5,#ff8000"`), `layout` (`tree`, the default, or `flat`), `force` and `strict`. Unknown fields are an error.
+of strings as `--mark` takes them, `"41.2,17.5,#ff8000"`), `layout` (`tree`, the default, or `flat`), `force` and `strict`.
+Unknown fields are an error.
 
 - `area_iso` checks, and draws when it must, as a batch does, the views each on its own thread; it answers the area's manifest
   (`area-iso.md`), with `action` (`current`, `cached` or `rendered`) and `manifest_path` added. It does not touch `manifest.jsonl`:

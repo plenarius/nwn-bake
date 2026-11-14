@@ -155,7 +155,7 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
         .collect();
     let water: Vec<[[f32; 3]; 3]> = water.iter().map(|t| t.map(|p| camera.turn(p))).collect();
     let (cam, l) = (camera.cam, camera.light);
-    // (A region's shadows are cast by what stands around it as well, so a tree just outside it still shades its ground.)
+    // (A region's shadows are cast by what stands around it as well, so a tree 5 m outside it still shades its ground.)
     let casters: Option<Vec<DrawTri<'_>>> = prep.casters.as_ref().filter(|_| o.shadows).map(|c| {
         c.iter()
             .filter(|t| !is_void(t))
