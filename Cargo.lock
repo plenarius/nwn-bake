@@ -1376,7 +1376,7 @@ dependencies = [
 
 [[package]]
 name = "nwn-bake"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "glam",
@@ -1405,7 +1405,7 @@ dependencies = [
 
 [[package]]
 name = "nwn-bake-cli"
-version = "0.3.0"
+version = "0.4.0"
 dependencies = [
  "anyhow",
  "clap",
