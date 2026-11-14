@@ -4,6 +4,18 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## Unreleased
+
+- **`area-iso --region X0,Y0,X1,Y1` and `--mark X,Y[,#rrggbb]`: a close-up of one change.** `--region` draws one rectangle of the
+  ground (game metres) and what stands on it, cut out of the scene as a column, so nothing outside it leaks into the picture and
+  only its triangles are drawn; the shadows come from 30 m around it as well. `--mark` (repeatable) rings a game point at the
+  ground's height, 1.5 m in radius, over everything, in the colour given (magenta by default). For a pull request's preview of a
+  placeable moved 2 m. One area only (exit code 2 with `--all`, several areas, or a rectangle outside the area). The manifest has
+  them in `options.region` and `options.marks`, and the rectangle drawn in `region_m`; they are part of the keys. Without them,
+  pictures, manifests and keys are as before (`PICTURES_VERSION` stays). `serve`'s `area_iso` takes `region` and `marks`.
+  Library: `iso::region` (`Region`, `Mark`, `clip`), `IsoOptions::region` and `IsoOptions::marks`, `Rendered::region`,
+  `Prepared::region`, `Manifest::region_m`, `area::size_of`.
+
 ## 0.4.0 (2026-11-14)
 
 - **`placeable`: a placeables.2da row as one scene** (`scene.json` and `tex/`, as `creature` writes a character's), for a web page that

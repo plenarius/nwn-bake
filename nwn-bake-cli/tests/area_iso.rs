@@ -265,11 +265,49 @@ fn an_area_that_is_not_there_fails_and_the_others_are_drawn() {
         &["--jobs", "0"],
         &["--layout", "deep"],
         &["--all"],
+        &["--region", "1,2,3"],
+        &["--region", "1,2,1,5"],
+        &["--mark", "1,2,red"],
+        &["--region", "100,100,110,110"],
+        &["fx_main", "--mark", "1,2"],
+        &["fx_main", "--region", "0,0,5,5"],
     ] {
         let o = run(&f, &[&["area-iso", s(&f.module_mod()), "fx_step", "--out", s(&f.base.join("bad"))][..], bad].concat());
         assert_eq!(o.status.code(), Some(2), "{bad:?}: {}", String::from_utf8_lossy(&o.stderr));
     }
+    // --region and --mark draw one area: with --all they are misuse.
+    let o = run(&f, &["area-iso", s(&f.module_mod()), "--all", "--out", s(&f.base.join("bad")), "--mark", "1,2"]);
+    assert_eq!(o.status.code(), Some(2), "{}", String::from_utf8_lossy(&o.stderr));
     assert!(!f.base.join("bad").exists());
+    let _ = std::fs::remove_dir_all(&f.base);
+}
+
+#[test]
+fn a_close_up_is_drawn_with_its_region_and_marks_in_its_manifest() {
+    let f = fixture::write(&fixture::dir("cli-closeup"));
+    let (out, module) = (f.base.join("out"), f.module_mod());
+    let args = ["area-iso", s(&module), "fx_mark", "--out", s(&out), "--view", "sw,top", "--format", "png", "--scale", "10"];
+    let more = ["--region", "-5,15,15,5", "--mark", "12.5,7.5,#00e040", "--mark", "11,7"];
+    ok(&run(&f, &[&args[..], &more].concat()));
+    let m = read_json(&out.join("fx_mark.json"));
+    valid(&schema(), &m);
+    assert_eq!(m["options"]["region"], serde_json::json!([-5.0, 5.0, 15.0, 15.0]));
+    assert_eq!(m["region_m"], serde_json::json!([0.0, 5.0, 15.0, 15.0]));
+    assert_eq!(m["options"]["marks"][0], serde_json::json!({"at": [12.5, 7.5], "colour": "#00e040"}));
+    assert_eq!(m["options"]["marks"][1]["colour"], "#ff00ff");
+    // Straight down: the rectangle drawn (15 by 10 m) at 10 pixels a metre, 4 pixels of padding around; the green ring where the
+    // matrix puts it.
+    let top = &m["views"][1];
+    assert_eq!((top["width"].as_u64(), top["height"].as_u64()), (Some(158), Some(108)));
+    let (w, _, rgba) = read_png(&out.join("fx_mark.top.png"));
+    let t = matrix(top);
+    let (px, py) = (t[0][0] * 14.0 + t[0][1] * 7.5 + t[0][3], t[1][0] * 14.0 + t[1][1] * 7.5 + t[1][3]);
+    let i = (py.floor() as usize * w as usize + px.floor() as usize) * 4;
+    assert_eq!(&rgba[i..i + 4], &[0, 224, 64, 255]);
+    // The keys differ from the whole area's.
+    let whole = f.base.join("whole");
+    ok(&run(&f, &["area-iso", s(&f.module_mod()), "fx_mark", "--out", s(&whole), "--view", "sw,top", "--format", "png", "--scale", "10"]));
+    assert_ne!(read_json(&whole.join("fx_mark.json"))["key"], m["key"]);
     let _ = std::fs::remove_dir_all(&f.base);
 }
 

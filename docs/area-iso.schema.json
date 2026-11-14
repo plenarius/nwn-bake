@@ -251,6 +251,41 @@
         },
         "depth": {
           "type": "boolean"
+        },
+        "region": {
+          "description": "--region as asked for: [x0, y0, x1, y1] in game metres, the south-west corner first. Left out without one.",
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 4,
+          "maxItems": 4
+        },
+        "marks": {
+          "description": "--mark: the rings drawn over every picture, in the order given. Left out without any.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "at",
+              "colour"
+            ],
+            "properties": {
+              "at": {
+                "description": "The ring's centre, x and y in game metres.",
+                "type": "array",
+                "items": {
+                  "type": "number"
+                },
+                "minItems": 2,
+                "maxItems": 2
+              },
+              "colour": {
+                "type": "string",
+                "pattern": "^#[0-9a-f]{6}$"
+              }
+            }
+          }
         }
       }
     },
@@ -260,6 +295,15 @@
         "number",
         "null"
       ]
+    },
+    "region_m": {
+      "description": "With --region: the rectangle drawn, [x0, y0, x1, y1] in game metres, the region asked for clamped to the area. Left out without one.",
+      "type": "array",
+      "items": {
+        "type": "number"
+      },
+      "minItems": 4,
+      "maxItems": 4
     },
     "views": {
       "type": "array",

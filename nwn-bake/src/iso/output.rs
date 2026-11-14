@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 use anyhow::{Context, Result, bail};
 use serde::Serialize;
 
+use super::region::MarkInfo;
 use super::{Background, Depth, IsoOptions, Light, Look, Picture, Rendered, Roof, View};
 use crate::area::{Kind, Scene};
 
@@ -179,6 +180,10 @@ pub struct Manifest {
     pub options: OptionsInfo,
     /// Where the roof was cut (metres), if it was.
     pub roof_cut_m: Option<f32>,
+    /// With `--region`: the rectangle drawn, `[x0, y0, x1, y1]` in metres, the region asked for clamped to the area. Left out
+    /// without one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region_m: Option<[f32; 4]>,
     /// Each view drawn, in the order asked for.
     pub views: Vec<ViewInfo>,
     /// What could not be read or looked wrong: the scene's notes, the haks not found, then the pictures' notes.
@@ -256,6 +261,12 @@ pub struct OptionsInfo {
     pub webp_quality: Option<f32>,
     /// Whether there are depth pictures.
     pub depth: bool,
+    /// [`IsoOptions::region`] as asked for, `[x0, y0, x1, y1]` (the south-west corner first); left out without one.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub region: Option<[f32; 4]>,
+    /// [`IsoOptions::marks`]; left out without any.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub marks: Vec<MarkInfo>,
 }
 
 impl OptionsInfo {
@@ -281,6 +292,8 @@ impl OptionsInfo {
             format: format.ext(),
             webp_quality: (format == Format::Webp).then_some(WEBP_QUALITY),
             depth: o.depth,
+            region: o.region.map(super::Region::corners),
+            marks: o.marks.iter().map(MarkInfo::from).collect(),
         }
     }
 }
@@ -344,6 +357,7 @@ pub fn manifest(scene: &Scene, name: Option<String>, inputs: Inputs, rendered: &
         quick_key: None,
         options: OptionsInfo::of(o, scene.objects, out.format),
         roof_cut_m: rendered.roof_cut.map(|c| c.at),
+        region_m: rendered.region.map(super::Region::corners),
         views: rendered
             .pictures
             .iter()

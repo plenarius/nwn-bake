@@ -24,6 +24,7 @@ pub mod batch;
 mod chasm;
 mod draw;
 mod output;
+pub mod region;
 mod shadows;
 
 pub use output::{
@@ -39,6 +40,7 @@ use serde::{Deserialize, Serialize};
 use crate::area::{RoofCut, RoofRule, Scene, Triangle};
 use chasm::ChasmField;
 use draw::{Camera, Face, Frame, MAX_SAMPLES, MAX_SIDE_PX, draw, frame};
+use region::{Mark, Region};
 
 /// Where the camera stands.
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
@@ -248,6 +250,10 @@ pub struct IsoOptions {
     pub depth: bool,
     /// The constants that set the look.
     pub look: Look,
+    /// Only this rectangle of the ground and what stands on it ([`region`]); None for the whole area.
+    pub region: Option<Region>,
+    /// Rings drawn over every picture ([`region`]), in this order.
+    pub marks: Vec<Mark>,
 }
 
 impl Default for IsoOptions {
@@ -263,6 +269,8 @@ impl Default for IsoOptions {
             background: Background::Transparent,
             depth: false,
             look: Look::default(),
+            region: None,
+            marks: Vec::new(),
         }
     }
 }
@@ -342,6 +350,8 @@ pub struct Rendered {
     pub pictures: Vec<Picture>,
     /// Where the roof was cut, if it was.
     pub roof_cut: Option<RoofCut>,
+    /// The region drawn, clamped to the area ([`IsoOptions::region`]); None when the whole area was.
+    pub region: Option<Region>,
     /// What looked wrong in the pictures (a texture drawn nearly white over much of a picture).
     pub notes: Vec<String>,
 }
@@ -368,6 +378,12 @@ pub struct Prepared {
     roof_cut: Option<RoofCut>,
     lights: ([f32; 3], [f32; 3]),
     chasm: ChasmField,
+    /// With a region: the region, clamped to the area ([`Prepared::region`]).
+    region: Option<Region>,
+    /// With a region: what casts shadows, the triangles within [`region::SHADOW_MARGIN`] of it.
+    casters: Option<Vec<Triangle>>,
+    /// The marks, each at the ground's height under it.
+    marks: Vec<([f32; 3], [u8; 3])>,
 }
 
 /// One view drawn, and what looked wrong in it.
@@ -401,8 +417,35 @@ pub fn prepare(scene: &Scene, o: &IsoOptions) -> Result<Prepared> {
     };
     let lights = (amb.map(|c| c * look.ambient), dif.map(|c| c * look.diffuse));
     let chasm = ChasmField::new(scene.size(), &triangles, look);
-    let prepared =
-        Prepared { o: o.clone(), textures: scene.textures.clone(), triangles, water, size: scene.size(), roof_cut, lights, chasm };
+    // (A region is cut out of the scene before anything is drawn, so a close-up of a big area draws only its own triangles.)
+    let region = match o.region {
+        Some(r) => Some(r.clamp(scene.size()).with_context(|| {
+            let [x0, y0, x1, y1] = r.corners();
+            let [sx, sy] = scene.size();
+            format!("the region {x0},{y0} to {x1},{y1} is outside the area (0,0 to {sx},{sy})")
+        })?),
+        None => None,
+    };
+    let (triangles, water, casters) = match region {
+        Some(r) => {
+            (region::clip(&triangles, r), region::clip_water(&water, r), Some(region::clip(&triangles, r.grow(region::SHADOW_MARGIN))))
+        }
+        None => (triangles, water, None),
+    };
+    let marks = o.marks.iter().map(|m| ([m.at[0], m.at[1], ground(&scene.probe, m.at)], m.colour)).collect();
+    let prepared = Prepared {
+        o: o.clone(),
+        textures: scene.textures.clone(),
+        triangles,
+        water,
+        size: scene.size(),
+        roof_cut,
+        lights,
+        chasm,
+        region,
+        casters,
+        marks,
+    };
     // (Before anything is allocated: a scale of 100,000 would ask for terabytes and abort the process, a server's too.)
     for &view in &o.views {
         let Frame { w, h, .. } = frame(&prepared, &Camera::of(view, look));
@@ -425,6 +468,11 @@ impl Prepared {
     /// Where the roof is cut, if it is.
     pub fn roof_cut(&self) -> Option<RoofCut> {
         self.roof_cut
+    }
+
+    /// The region drawn, clamped to the area; None when the whole area is.
+    pub fn region(&self) -> Option<Region> {
+        self.region
     }
 
     /// The views asked for, in order.
@@ -455,8 +503,24 @@ impl Prepared {
             }
             pictures.push(d.picture);
         }
-        Rendered { pictures, roof_cut: self.roof_cut, notes }
+        Rendered { pictures, roof_cut: self.roof_cut, region: self.region, notes }
     }
+}
+
+/// The ground's height at `at` (metres), from the floor probe's samples around it; 0 for an area without any.
+fn ground(probe: &crate::area::FloorProbe, at: [f32; 2]) -> f32 {
+    if probe.nx == 0 || probe.ny == 0 || probe.heights.len() < probe.nx * probe.ny {
+        return 0.0;
+    }
+    let spacing = crate::area::floor::SPACING;
+    let (fx, fy) = ((at[0] / spacing).clamp(0.0, (probe.nx - 1) as f32), (at[1] / spacing).clamp(0.0, (probe.ny - 1) as f32));
+    let (i, j) = ((fx.floor() as usize).min(probe.nx.saturating_sub(2)), (fy.floor() as usize).min(probe.ny.saturating_sub(2)));
+    let (i1, j1) = ((i + 1).min(probe.nx - 1), (j + 1).min(probe.ny - 1));
+    let (tx, ty) = ((fx - i as f32).clamp(0.0, 1.0), (fy - j as f32).clamp(0.0, 1.0));
+    let z = |i: usize, j: usize| probe.heights[j * probe.nx + i];
+    let south = z(i, j) * (1.0 - tx) + z(i1, j) * tx;
+    let north = z(i, j1) * (1.0 - tx) + z(i1, j1) * tx;
+    south * (1.0 - ty) + north * ty
 }
 
 /// Water faces with everything above `at` metres cut away ([`crate::area::cut`]).

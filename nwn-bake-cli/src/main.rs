@@ -558,6 +558,12 @@ struct AreaIsoArgs {
     /// Also a 16-bit height picture per view
     #[arg(long)]
     depth: bool,
+    /// Only this rectangle of the ground, two opposite corners in game metres (as the .git's XPosition and YPosition); one area
+    #[arg(long, value_name = "X0,Y0,X1,Y1", value_parser = parse_region, allow_hyphen_values = true)]
+    region: Option<nwn_bake::iso::region::Region>,
+    /// A ring over every picture at this game point (1.5 m radius, magenta unless a colour is given), on top of everything; repeatable; one area
+    #[arg(long = "mark", value_name = "X,Y[,#rrggbb]", value_parser = parse_mark, allow_hyphen_values = true)]
+    marks: Vec<nwn_bake::iso::region::Mark>,
     /// flat (files side by side) or tree (webp/<view>/<area>.webp and json/<area>.json) [default: tree with --all, else flat]
     #[arg(long, value_name = "flat|tree", value_parser = parse_layout)]
     layout: Option<bool>,
@@ -602,6 +608,14 @@ fn parse_scale(v: &str) -> Result<f32, String> {
 
 fn parse_format(v: &str) -> Result<nwn_bake::iso::Format, String> {
     nwn_bake::iso::Format::parse(v).map_err(|e| format!("{e:#}"))
+}
+
+fn parse_region(v: &str) -> Result<nwn_bake::iso::region::Region, String> {
+    nwn_bake::iso::region::Region::parse(v).map_err(|e| format!("{e:#}"))
+}
+
+fn parse_mark(v: &str) -> Result<nwn_bake::iso::region::Mark, String> {
+    nwn_bake::iso::region::Mark::parse(v).map_err(|e| format!("{e:#}"))
 }
 
 fn parse_light(v: &str) -> Result<nwn_bake::iso::Light, String> {
@@ -1176,6 +1190,8 @@ fn area_iso(a: AreaIsoArgs) -> Result<usize> {
         roof: a.roof,
         exposure: a.exposure,
         depth: a.depth,
+        region: a.region,
+        marks: a.marks,
         ..IsoOptions::default()
     };
     if let Some(b) = a.background {
@@ -1194,12 +1210,24 @@ fn area_iso(a: AreaIsoArgs) -> Result<usize> {
     if o.views.len() > 1 && !out.name.contains("{view}") {
         misuse("area-iso", "with several views, --name needs {view} in it");
     }
+    // (A region and marks are places in one area: the next area's places are elsewhere.)
+    let close_up = o.region.is_some() || !o.marks.is_empty();
+    if close_up && (all || a.areas.areas.len() > 1) {
+        misuse("area-iso", "--region and --mark draw one area: name one, not several or --all");
+    }
     let jobs = jobs(a.jobs)?;
     let user = a.game.user()?;
     let budget = a.game.budget()?;
 
     let started = Instant::now();
     let (source, areas) = a.areas.resolve("area-iso")?;
+    if let (Some(r), [area]) = (o.region, areas.as_slice()) {
+        let size = nwn_bake::area::size_of(&source.area(area)?)?;
+        if r.clamp(size).is_none() {
+            let [x0, y0, x1, y1] = r.corners();
+            misuse("area-iso", format!("the region {x0},{y0} to {x1},{y1} is outside the area {area} (0,0 to {},{})", size[0], size[1]));
+        }
+    }
     let module_s = started.elapsed().as_secs_f64();
     let hak_list = a.haks.map_or_else(|| source.haks().to_vec(), |h| h.0);
     let tlk = Tlk::given_or_module(a.tlk.given(), source.tlk().map(str::to_string));
@@ -1369,6 +1397,8 @@ mod tests {
             &["area-iso", "m.mod", "a", "--out", "o", "--scale", "-1"],
             &["area-iso", "m.mod", "a", "--all", "--out", "o"],
             &["area-iso", "m.mod", "a", "--out", "o", "--quality", "2"],
+            &["area-iso", "m.mod", "a", "--out", "o", "--region", "1,2,3,4,5"],
+            &["area-iso", "m.mod", "a", "--out", "o", "--mark", "1"],
             &["area-3d", "m.mod", "a", "--out", "o", "--quality", "101"],
             &["area-3d", "m.mod", "a", "--out", "o", "--jobs", "0"],
         ] {
@@ -1379,6 +1409,14 @@ mod tests {
         assert!(parse(&["scene", "-", "b.png", "--items", "uti", "--strict-items"]).is_ok());
         assert!(parse(&["scene", "a.json"]).is_err(), "a scene needs its PNG");
         assert!(parse(&["area-iso", "m.mod", "a", "--out", "o", "--views", "all,top", "--roof", "-2"]).is_ok());
+        let Cmd::AreaIso(a) =
+            parse(&["area-iso", "m.mod", "a", "--out", "o", "--region", "-5,-5,10,10", "--mark", "-1,2", "--mark", "3,4,#00ff00"])
+                .unwrap()
+                .command
+        else {
+            panic!("not area-iso")
+        };
+        assert_eq!((a.region.map(|r| r.corners()), a.marks.len()), (Some([-5.0, -5.0, 10.0, 10.0]), 2), "negative corners are numbers");
         let Cmd::AreaIso(a) = parse(&["area-iso", "m.mod", "a", "--out", "o", "--shadows", "off", "--exposure", "off"]).unwrap().command
         else {
             panic!("not area-iso")

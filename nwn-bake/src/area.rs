@@ -12,6 +12,7 @@ pub mod scene;
 pub use floor::{FloorFile, FloorProbe, FloorStats, RoofCut, RoofRule};
 pub use scene::{
     Kind, Light, Part, Scene, SceneOptions, SceneTexture, Triangle, chasm_black, chasm_shape, cut, is_chasm_floor, is_chasm_terrain, scene,
+    size_of,
 };
 
 use std::collections::HashSet;
