@@ -21,7 +21,7 @@ ignore = [
     { id = "RUSTSEC-2026-0369", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
     { id = "RUSTSEC-2026-0429", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
     { id = "RUSTSEC-2026-0545", reason = "zip 8.6.0 through Moonglow's zip 8 pin; AES entries need aes-crypto, which isn't built" },
-    { id = "RUSTSEC-2026-0546", reason = "zip 8.6.0 through Moonglow's zip 8 pin; extract()'s symlink escape, and nothing here calls extract()" },
+    { id = "RUSTSEC-2026-0546", reason = "zip 8.6.0 through Moonglow's zip 8 pin; extract()'s symlink escape; nothing here calls extract()" },
     { id = "RUSTSEC-2026-0547", reason = "zip 8.6.0 through Moonglow's zip 8 pin; the legacy decoders need legacy-zip, which isn't built" },
     { id = "RUSTSEC-2026-0548", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only ZipStreamReader is affected, which isn't used" },
 ]
