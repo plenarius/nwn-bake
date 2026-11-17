@@ -7,14 +7,22 @@ all-features = true
 [advisories]
 # RustSec advisories: a vulnerable or unmaintained crate fails the check. Ignore one only with a reason and a date to look again.
 # `zip` 8.6.0 comes in through Moonglow (`mg-module`), which asks for `zip = "8"`. 8.6.0 is the last 8.x and the fixes are in 9.0.0
-# only, so cargo cannot update it until Moonglow moves to zip 9 and our pin follows (MOONGLOW.md). All four are in
-# `ZipArchive::extract` and `ZipStreamReader::extract`, which no workspace that follows STYLE.md calls: Moonglow reads entries with
-# `by_name`, and our own code only writes zips, or has no zip code. Look again on 2027-02-01, or when the Moonglow pin moves.
+# (9.0.5 for -0548) only, so cargo cannot update it until Moonglow moves to zip 9 and our pin follows (MOONGLOW.md). Each is in code
+# that no workspace that follows STYLE.md runs: Moonglow reads entries with `by_name`, and our own code only writes zips, or has no
+# zip code. Uploads and modules are ERF files (Moonglow's `mg-erf`), never zips. Look again on 2027-02-01, or when the pin moves.
+# - -0367, -0368, -0369, -0429, -0546: `ZipArchive::extract`, `ZipStreamReader::extract`.
+# - -0545: reading AES-encrypted entries, only with the `aes-crypto` feature, which isn't built (only the deflate features are).
+# - -0547: the Shrink, Reduce and Implode decoders, only with the `legacy-zip` feature, which isn't built.
+# - -0548: `ZipStreamReader`, which nothing here uses.
 ignore = [
     { id = "RUSTSEC-2026-0367", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
     { id = "RUSTSEC-2026-0368", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
     { id = "RUSTSEC-2026-0369", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
     { id = "RUSTSEC-2026-0429", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
+    { id = "RUSTSEC-2026-0545", reason = "zip 8.6.0 through Moonglow's zip 8 pin; AES entries need aes-crypto, which isn't built" },
+    { id = "RUSTSEC-2026-0546", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only extract() is affected, which nothing here calls" },
+    { id = "RUSTSEC-2026-0547", reason = "zip 8.6.0 through Moonglow's zip 8 pin; the legacy decoders need legacy-zip, which isn't built" },
+    { id = "RUSTSEC-2026-0548", reason = "zip 8.6.0 through Moonglow's zip 8 pin; only ZipStreamReader is affected, which isn't used" },
 ]
 
 [licenses]
