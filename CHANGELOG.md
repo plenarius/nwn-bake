@@ -4,6 +4,12 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.5.1 (2026-11-17)
+
+- **`deny.toml`: the four new `zip` 8.6.0 advisories** (RUSTSEC-2026-0545, -0546, -0547, -0548) are ignored, each with its
+  reason: none is on a path nwn-bake or the Moonglow crates it uses can run (no `aes-crypto` or `legacy-zip` feature, no
+  `extract()`, no `ZipStreamReader`). No code changes; the binaries are as in 0.5.0 apart from the version.
+
 ## 0.5.0 (2026-11-14)
 
 - **`area-iso --region X0,Y0,X1,Y1` and `--mark X,Y[,#rrggbb]`: a close-up of one change.** `--region` draws one rectangle of the
