@@ -63,7 +63,8 @@ nwn-bake area-iso /tmp/nwn-bake-try/fx.mod fx_main fx_mark --view all,top --out 
 
 ## Finding the game
 
-Every command needs the game:
+Every command needs the game. The options below are options of each command, so they go after its name
+(`nwn-bake area-iso --root <install> <module>`), not before it.
 
 - `--root <install>`: the NWN:EE install, the folder with `data/` and `lang/`. Without it, the install is found as the game finds
   it (`NWN_ROOT`, then the usual places).
