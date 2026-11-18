@@ -104,16 +104,15 @@ The first public release.
   a server that links the library) goes on after a failed request: locks a panic left poisoned are used as they are.
 - **Release notices**: `THIRD-PARTY-LICENSES.html` has the licences of the C and C++ libraries in the binaries (libwebp with its
   patent grant, glslang, zstd) and leaves out crates only other platforms use.
-- **A blueprint's equipped items** (#122, #123): `thumb`, `creature`, `describe`, `look` and `serve` look up the items a `.utc`
+- **A blueprint's equipped items**: `thumb`, `creature`, `describe`, `look` and `serve` look up the items a `.utc`
   names by resref, which they used to leave off without a word: in a folder of the module's item blueprints first (`--items`,
   `items` in `serve`; binary `.uti` or nwn_gff's `.uti.json`), then the user's override and haks, then the game. An item found
   nowhere is named with its slot: a warning on stderr, `missing_items` in `serve`'s answers and in the look; `--strict-items`
   (`strict_items`) makes it an error. Library: `nwn_bake::items`; `creature::thumbnail`, `bake_creature`, `look::describe` and
   `look::ensure` take the item lookup, and `thumbnail` returns `creature::Thumbnail`. These commands and `item-thumb` read
   nwn_gff's JSON blueprints too.
-- **`keep_tags` has no default** (#121): a draft without `keep_tags` keeps no tag from `drop_objects`. It used to keep
-  `hsng_entry` and `ldh_doorbell*`; the caller now names the tags to keep.
-- **Scenes** (`scene`, #124): placeables, models, creatures and items in one picture, each with a position, facing, scale and
+- **`keep_tags` has no default**: a draft keeps no tag from `drop_objects` unless the caller names it.
+- **Scenes** (`scene`): placeables, models, creatures and items in one picture, each with a position, facing, scale and
   texture replacements, at a free camera (a position, or a target with yaw, pitch and distance; perspective or orthographic;
   framed to what is drawn when left out). Lines, axis markers, points projected to pixels, the light (`day` or an area's sun
   colours), the sun's shadows and the background (transparent or a colour). A creature wears its blueprint's items through the

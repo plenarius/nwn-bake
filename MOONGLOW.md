@@ -11,7 +11,8 @@ top `Cargo.toml`. Every build, here and in CI, uses the same Moonglow.
 
 Cargo treats one git URL at two revisions as two different crates: a `GameData` from one is not the `GameData` of the other, and the
 build fails. A program that uses nwn-bake and Moonglow's crates itself must pin Moonglow to the same commit as the nwn-bake it uses.
-Each nwn-bake release names its Moonglow commit here and in `CHANGELOG.md`.
+"Now", above, is the Moonglow commit of the latest release, and `CHANGELOG.md` names the commit in each release that changes
+it: a release that doesn't mention Moonglow uses the same commit as the one before.
 
 ## Moving to another commit
 
