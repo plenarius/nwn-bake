@@ -229,9 +229,9 @@ Every file says who owns it and under which licence, the [REUSE](https://reuse.s
   A file based on someone else's work keeps their copyright line above ours.
 - Everything else (Markdown, configuration, JSON, images, lock files) is covered by `REUSE.toml`, so those files stay clean.
 - Vendored code keeps its own licence, recorded in `REUSE.toml`.
-- Measured game data (see [Never in these repositories](#never-in-these-repositories)) is Beamdog's: `REUSE.toml` gives it
-  `SPDX-FileCopyrightText = "Beamdog"` and `LicenseRef-Beamdog`, a text in `LICENSES/` saying that the repository grants no
-  licence for it.
+- Measured layout data (see [Never in these repositories](#never-in-these-repositories)) is facts measured on a real game
+  install, not a file or code taken from the game: `REUSE.toml` gives it `CC0-1.0` (no rights claimed in the measurements) and
+  says, in its comment, how it was measured.
 - The licence texts are in `LICENSES/`, one file per SPDX identifier. `LICENSE` at the top stays, for GitHub and for people.
 
 The licences:
@@ -250,8 +250,8 @@ every Rust dependency's licence is on the list in `deny.toml` and `about.toml`.
 Decompiled game code (a decompiler's output from the game's binaries, cleaned up or not), the game's own files or extracts of
 them (models, textures, 2da files, talk tables, scripts, shaders), and anything else taken from the game. None of it is ours to
 license. The one exception for data is layout data measured from how the game behaves, when a program can't work without it and
-the game has no file to read it from: the area editor's path node layouts, measured from the server and marked as Beamdog's in
-that repository's `REUSE.toml`.
+the game has no file to read it from: the area editor's path node layouts, coordinates measured on a real game install and marked
+`CC0-1.0` in that repository's `REUSE.toml`.
 
 The one exception for code is the area editor's route simulator (`src/sim.rs`, `src/sim/` in
 [github.com/plenarius/landscaper](https://github.com/plenarius/landscaper)): our own reimplementation of how the NWN:EE game
