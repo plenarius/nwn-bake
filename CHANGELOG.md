@@ -4,6 +4,11 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.5.2 (2026-11-18)
+
+- **`STYLE.md`: measured layout data is CC0-1.0**, described as measurements taken on a real game install rather than marked as
+  Beamdog's (#10). No code changes; the binaries are as in 0.5.1 apart from the version.
+
 ## 0.5.1 (2026-11-17)
 
 - **`deny.toml`: the four new `zip` 8.6.0 advisories** (RUSTSEC-2026-0545, -0546, -0547, -0548) are ignored, each with its
