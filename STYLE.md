@@ -1,8 +1,8 @@
 # Code and documentation standard
 
 One standard for every repository that follows it: [nwn-bake](https://github.com/plenarius/nwn-bake) and the projects built on
-it, an area editor's Rust engine ([github.com/plenarius/landscaper](https://github.com/plenarius/landscaper)) and its web page
-([github.com/plenarius/landscaper-web](https://github.com/plenarius/landscaper-web)). Each repository keeps an identical copy of
+it, an area editor's Rust engine ([github.com/plenarius/nwn-landscaper](https://github.com/plenarius/nwn-landscaper)) and its web page
+([github.com/plenarius/nwn-landscaper-web](https://github.com/plenarius/nwn-landscaper-web)). Each repository keeps an identical copy of
 this file at its root, and of the shared configuration files listed under [The checks](#the-checks).
 
 **nwn-bake's copy is the master.** Change it there first, then copy it word for word to every other repository that follows this
@@ -237,9 +237,9 @@ Every file says who owns it and under which licence, the [REUSE](https://reuse.s
 The licences:
 
 - **nwn-bake:** GPL-3.0-or-later.
-- **The area editor's engine** ([github.com/plenarius/landscaper](https://github.com/plenarius/landscaper)):
+- **The area editor's engine** ([github.com/plenarius/nwn-landscaper](https://github.com/plenarius/nwn-landscaper)):
   GPL-3.0-or-later, like nwn-bake. Both build on Moonglow, which is GPL-3.0, so their binaries are GPL-3.0 in any case.
-- **The area editor's web page** ([github.com/plenarius/landscaper-web](https://github.com/plenarius/landscaper-web)): MIT. It
+- **The area editor's web page** ([github.com/plenarius/nwn-landscaper-web](https://github.com/plenarius/nwn-landscaper-web)): MIT. It
   started from ergin3d's MIT-licensed code, and its `LICENSE` keeps ergin3d's copyright line above ours.
 
 Each repository's licence is also in its `REUSE.toml`, `Cargo.toml` (Rust) and README. `cargo-deny` and `cargo-about` check that
@@ -254,7 +254,7 @@ the game has no file to read it from: the area editor's path node layouts, coord
 `CC0-1.0` in that repository's `REUSE.toml`.
 
 The one exception for code is the area editor's route simulator (`src/sim.rs`, `src/sim/` in
-[github.com/plenarius/landscaper](https://github.com/plenarius/landscaper)): our own reimplementation of how the NWN:EE game
+[github.com/plenarius/nwn-landscaper](https://github.com/plenarius/nwn-landscaper)): our own reimplementation of how the NWN:EE game
 server plans a creature's walk inside an area, kept so that the areas we export walk the way the server routes them
 (interoperability with the game). It holds no decompiler output, binary addresses, the engine's internal names or its data
 layouts; the code and its comments are ours and describe what it does in our own words. It reproduces the server's behaviour,

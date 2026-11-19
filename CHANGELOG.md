@@ -4,6 +4,11 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.6.1 (2026-11-19)
+
+- **`STYLE.md`: the area editor's repositories are named `plenarius/nwn-landscaper` and `plenarius/nwn-landscaper-web`**, the
+  names they are published under. No code changes; the binaries are as in 0.6.0 apart from the version.
+
 ## 0.6.0 (2026-11-19)
 
 - **`area-iso --roof ground:<metres>`: a roof cut that follows the ground** (#13). At each point it cuts what is more than that
