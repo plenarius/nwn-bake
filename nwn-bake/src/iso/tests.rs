@@ -474,3 +474,18 @@ fn the_roof_parses_and_is_written_as_given() {
     let m = serde_json::to_value(manifest(&s, None, Inputs::default(), &r, &plain(vec![View::Top]), &OutOptions::new("unused"))).unwrap();
     assert!(m.get("roof_over_ground_m").is_none());
 }
+
+#[test]
+fn deep_water_is_kept_with_the_roof_cut_along_the_ground() {
+    // A pond on the low ground, its surface 3 m over its bed (the walkmesh): deeper than the cut. Its water is drawn as without a cut,
+    // a red float 0.5 m over it is kept, and a red branch 3 m over it is cut.
+    let mut s = two_levels(&[[3.0, 7.0, 3.5], [7.0, 3.0, 6.0]]);
+    s.water = quad(2.0, 2.0, 8.0, 8.0, 3.0, 0).iter().map(|t| t.p).collect();
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) }).unwrap();
+    let keep = render(&s, &IsoOptions { roof: Roof::Keep, ..plain(vec![View::Top]) }).unwrap();
+    let (p, k) = (&r.pictures[0], &keep.pictures[0]);
+    assert_eq!(top_pixel(p, 5.0, 5.0), top_pixel(k, 5.0, 5.0), "the water");
+    assert!(top_pixel(p, 5.0, 5.0)[1] > 40, "the water's colour: {:?}", top_pixel(p, 5.0, 5.0));
+    assert_eq!(hue(top_pixel(p, 3.0, 7.0)), 'r');
+    assert_eq!(top_pixel(p, 7.0, 3.0), top_pixel(p, 5.0, 5.0), "the branch is cut and the water shows");
+}

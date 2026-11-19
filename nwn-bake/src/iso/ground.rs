@@ -7,7 +7,8 @@
 //!
 //! The ground is the top of the tiles' walkmeshes, walked or not ([`FloorProbe::walkmesh_top`]): it follows a cliff's slope and a
 //! plateau's or a rock's top as the game's walkmesh has them, and stays at a tree's foot, whose walkmesh is its footprint on the
-//! ground. A tile's building can have a walkmesh block as high as its eaves: a raised patch of walkmesh that fits in
+//! ground. Under water the ground is the water's surface (deep water's walkmesh is its bed, metres under the surface the picture
+//! shows), so the water and what floats on it are kept. A tile's building can have a walkmesh block as high as its eaves: a raised patch of walkmesh that fits in
 //! [`super::Look::roof_ground_width`] and does not reach the area's edge is taken for one, and the probe's ground counts there instead.
 //! Where no walkmesh face is (black void, a hole in a tile), the probe's ground ([`FloorProbe::heights`]) stands in for it too: the
 //! walkable faces around, filled in across the gap within the tile, else the tile's own height. Each sample then takes the highest
@@ -33,17 +34,21 @@ pub(super) struct GroundCut {
 }
 
 impl GroundCut {
-    /// The cut `over` metres over the ground of `probe`: a raised patch of walkmesh that fits in a square `width` metres a side and
+    /// The cut `over` metres over the ground of `probe` and the water faces `water` (their surface is the ground under them): a raised patch of walkmesh that fits in a square `width` metres a side and
     /// does not reach the area's edge is no ground ([`raised_patches`]), and each sample takes the highest ground within `reach`
     /// metres (along x and y). None for a probe without samples.
-    pub(super) fn new(probe: &FloorProbe, over: f32, width: f32, reach: f32) -> Option<GroundCut> {
+    pub(super) fn new(probe: &FloorProbe, water: &[[[f32; 3]; 3]], over: f32, width: f32, reach: f32) -> Option<GroundCut> {
         let (nx, ny) = (probe.nx, probe.ny);
         if nx == 0 || ny == 0 || probe.heights.len() < nx * ny {
             return None;
         }
         let top: Vec<f32> = (0..nx * ny).map(|k| probe.walkmesh_top.get(k).copied().flatten().unwrap_or(probe.heights[k])).collect();
         let small = raised_patches(&top, &probe.heights, nx, ny, (width.max(0.0) / SPACING).round() as usize);
-        let ground: Vec<f32> = (0..nx * ny).map(|k| if small[k] { probe.heights[k] } else { top[k].max(probe.heights[k]) }).collect();
+        let mut ground: Vec<f32> = (0..nx * ny).map(|k| if small[k] { probe.heights[k] } else { top[k].max(probe.heights[k]) }).collect();
+        // (Under water, its surface: deep water's walkmesh is its bed, metres under the surface the picture shows.)
+        for t in water {
+            water_surface(t, nx, ny, |k, z| ground[k] = ground[k].max(z));
+        }
         let r = (reach.max(0.0) / SPACING).round() as usize;
         let at = square(&ground, nx, ny, r, f32::max).into_iter().map(|g| g + over).collect();
         Some(GroundCut { nx, ny, at })
@@ -142,6 +147,36 @@ fn raised_patches(top: &[f32], ground: &[f32], nx: usize, ny: usize, side: usize
     small
 }
 
+/// Calls `f(sample, z)` for each sample of an `nx` by `ny` grid (at (i, j) times [`SPACING`]) that the water face `t` covers, with
+/// the face's height there.
+fn water_surface(t: &[[f32; 3]; 3], nx: usize, ny: usize, mut f: impl FnMut(usize, f32)) {
+    let [a, b, c] = *t;
+    let area = (b[0] - a[0]) * (c[1] - a[1]) - (b[1] - a[1]) * (c[0] - a[0]);
+    if area.abs() < 1e-9 {
+        return;
+    }
+    // (The samples within the face's rectangle: from the first at or past its low side to the last at or before its high side.)
+    let range = |k: usize, n: usize| {
+        let lo = (a[k].min(b[k]).min(c[k]) / SPACING).ceil().max(0.0) as usize;
+        let hi = (a[k].max(b[k]).max(c[k]) / SPACING).floor();
+        // (Past the last: none when the face is wholly before the grid.)
+        let end = if hi < 0.0 { 0 } else { (hi as usize + 1).min(n) };
+        lo..end
+    };
+    for j in range(1, ny) {
+        let y = j as f32 * SPACING;
+        for i in range(0, nx) {
+            let x = i as f32 * SPACING;
+            let w0 = ((b[0] - x) * (c[1] - y) - (b[1] - y) * (c[0] - x)) / area;
+            let w1 = ((c[0] - x) * (a[1] - y) - (c[1] - y) * (a[0] - x)) / area;
+            let w2 = 1.0 - w0 - w1;
+            if w0 >= -1e-4 && w1 >= -1e-4 && w2 >= -1e-4 {
+                f(j * nx + i, w0 * a[2] + w1 * b[2] + w2 * c[2]);
+            }
+        }
+    }
+}
+
 /// Each sample of the grid `v` (`nx` by `nx`, rows of `nx`) made the `pick` (min or max) of the samples within `r` of it along x and
 /// y (a square of 2r + 1 a side, cut by the grid's edges).
 fn square(v: &[f32], nx: usize, ny: usize, r: usize, pick: fn(f32, f32) -> f32) -> Vec<f32> {
@@ -184,7 +219,7 @@ mod tests {
 
     #[test]
     fn the_cut_follows_the_ground_and_falls_back_on_the_probe() {
-        let g = GroundCut::new(&two_levels(), 2.0, 0.0, 0.0).unwrap();
+        let g = GroundCut::new(&two_levels(), &[], 2.0, 0.0, 0.0).unwrap();
         // Each level is cut 2 m over its own ground.
         assert_eq!(g.at(1.0, 1.0), 2.0);
         assert_eq!(g.at(8.0, 1.0), 12.0);
@@ -199,8 +234,8 @@ mod tests {
 
     #[test]
     fn the_reach_keeps_a_cliffs_face_over_the_ground_below() {
-        let none = GroundCut::new(&two_levels(), 2.0, 0.0, 0.0).unwrap();
-        let reach = GroundCut::new(&two_levels(), 2.0, 0.0, 1.25).unwrap();
+        let none = GroundCut::new(&two_levels(), &[], 2.0, 0.0, 0.0).unwrap();
+        let reach = GroundCut::new(&two_levels(), &[], 2.0, 0.0, 1.25).unwrap();
         // Two samples (1.25 m) west of the cliff's first sample at 5 m, the cliff top's cut.
         let x = 5.0 - 2.0 * SPACING;
         assert_eq!((none.at(x, 1.0), reach.at(x, 1.0)), (2.0, 12.0));
@@ -210,7 +245,7 @@ mod tests {
 
     #[test]
     fn a_triangle_is_tested_only_where_the_cut_may_cross_it() {
-        let g = GroundCut::new(&two_levels(), 2.0, 0.0, 0.0).unwrap();
+        let g = GroundCut::new(&two_levels(), &[], 2.0, 0.0, 0.0).unwrap();
         // On the low ground: a face at 1 m is wholly kept, one from 1 to 3 m crosses the cut.
         assert!(!g.crosses(&[[1.0, 1.0, 1.0], [2.0, 1.0, 1.0], [1.0, 2.0, 1.0]]));
         assert!(g.crosses(&[[1.0, 1.0, 1.0], [2.0, 1.0, 3.0], [1.0, 2.0, 1.0]]));
@@ -236,5 +271,20 @@ mod tests {
         assert!(at(3, 3) && at(5, 5) && !at(1, 4) && !at(8, 4) && !at(0, 0));
         // A patch as wide as the square is not small.
         assert!(!raised_patches(&top, &vec![0.0; nx * ny], nx, ny, 2)[4 * nx + 4]);
+    }
+
+    #[test]
+    fn under_water_the_ground_is_its_surface() {
+        // A pond 3 m deep over the low ground's west half (its bed, the walkmesh, at 0 m): cut 2 m over its surface.
+        let water = [[[0.0, 0.0, 3.0], [2.5, 0.0, 3.0], [2.5, 10.0, 3.0]], [[0.0, 0.0, 3.0], [2.5, 10.0, 3.0], [0.0, 10.0, 3.0]]];
+        let g = GroundCut::new(&two_levels(), &water, 2.0, 0.0, 0.0).unwrap();
+        assert_eq!((g.at(1.25, 5.0), g.at(3.75, 5.0)), (5.0, 2.0));
+        // Water under the ground (a cave's lake under its floor) changes nothing.
+        let under = [[[5.0, 0.0, 9.0], [10.0, 0.0, 9.0], [10.0, 10.0, 9.0]]];
+        assert_eq!(GroundCut::new(&two_levels(), &under, 2.0, 0.0, 0.0).unwrap().at(8.0, 1.0), 12.0);
+        // A face off the grid touches no sample.
+        let mut n = 0;
+        water_surface(&[[-5.0, -5.0, 0.0], [-1.0, -5.0, 0.0], [-1.0, -1.0, 0.0]], 17, 17, |_, _| n += 1);
+        assert_eq!(n, 0);
     }
 }

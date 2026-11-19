@@ -451,7 +451,7 @@ pub fn prepare(scene: &Scene, o: &IsoOptions) -> Result<Prepared> {
     };
     let ground_cut = match o.roof {
         Roof::Ground(m) if m > 0.0 => {
-            ground::GroundCut::new(&scene.probe, m, look.roof_ground_width, look.roof_ground_reach).map(|g| (g, m))
+            ground::GroundCut::new(&scene.probe, &scene.water, m, look.roof_ground_width, look.roof_ground_reach).map(|g| (g, m))
         }
         _ => None,
     };

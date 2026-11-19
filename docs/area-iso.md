@@ -125,6 +125,8 @@ walls and the insides of buildings, from the top.
 
 - **The ground** is the top of the tiles' walkmeshes, walked or not, every 0.625 m (the floor probe's samples): it follows a cliff's
   slope and a plateau's top as the walkmesh has them, and stays at a tree's foot, whose walkmesh is its footprint.
+- **Water.** Under a water face the ground is the water's surface: deep water's walkmesh is its bed, often more than the cut under
+  the surface, so the water, and what floats on it or crosses it at its height, is kept.
 - **Buildings.** A tile's building can have a walkmesh block that does not walk, as high as its eaves. A raised patch of walkmesh
   (more than 1 m over the walkable ground around it) that fits in a square of `roof_ground_width` metres (12 by default) and does
   not reach the area's edge is taken for one: there the walkable ground around it counts, so its roof is cut. A building wider
