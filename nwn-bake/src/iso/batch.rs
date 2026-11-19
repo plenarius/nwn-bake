@@ -943,9 +943,11 @@ pub fn lines_of(m: &Value) -> Vec<Value> {
     for k in ["format", "version", "renderer", "area", "inputs", "resources", "key", "quick_key", "options", "roof_cut_m", "notes"] {
         base.insert(k.into(), m[k].clone());
     }
-    // (Only a close-up has it, and the lines of the others stay as they were.)
-    if let Some(r) = m.get("region_m") {
-        base.insert("region_m".into(), r.clone());
+    // (Only a close-up has the one, a roof cut along the ground the other, and the lines of the others stay as they were.)
+    for k in ["region_m", "roof_over_ground_m"] {
+        if let Some(r) = m.get(k) {
+            base.insert(k.into(), r.clone());
+        }
     }
     m["views"]
         .as_array()
@@ -1015,7 +1017,7 @@ pub struct AreaRequest {
     pub light: Option<String>,
     /// Draw shadows ([`IsoOptions::shadows`]).
     pub shadows: Option<bool>,
-    /// `"auto"`, `"keep"` or metres.
+    /// `"auto"`, `"keep"`, metres over the floor (a number or a string), or `"ground:<metres>"` ([`super::Roof::parse`]).
     pub roof: Option<Value>,
     /// `"auto"` or `"off"` (or true or false).
     pub exposure: Option<Value>,
@@ -1080,10 +1082,9 @@ impl AreaRequest {
         }
         if let Some(r) = &self.roof {
             o.roof = match r {
-                Value::String(s) if s == "auto" => super::Roof::Auto,
-                Value::String(s) if s == "keep" => super::Roof::Keep,
+                Value::String(s) => super::Roof::parse(s)?,
                 Value::Number(n) => super::Roof::Over(n.as_f64().unwrap_or(0.0) as f32),
-                _ => bail!("roof is auto, keep or metres"),
+                _ => bail!("roof is auto, keep, metres or ground:<metres>"),
             };
         }
         if let Some(e) = &self.exposure {

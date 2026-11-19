@@ -23,6 +23,7 @@
 pub mod batch;
 mod chasm;
 mod draw;
+mod ground;
 mod output;
 pub mod region;
 mod shadows;
@@ -161,6 +162,13 @@ pub struct Look {
     pub chasm_seam: f32,
     /// The roof cut for interiors and underground areas.
     pub roof: RoofRule,
+    /// The roof cut that follows the ground ([`Roof::Ground`]): each point takes the highest ground within this many metres of it
+    /// (along x and y), so a cliff's face, drawn a little outside its walkmesh, is not cut where it hangs over the ground below.
+    pub roof_ground_reach: f32,
+    /// The roof cut that follows the ground: a raised patch of the walkmesh (more than 1 m over the walkable ground around it) that
+    /// fits in a square this many metres a side and does not reach the area's edge (a building's block, whose walkmesh can stand as
+    /// high as its eaves) is no ground, and the walkable ground around it counts there; a wider one (a plateau, a hill's top) is.
+    pub roof_ground_width: f32,
     /// A texel less opaque than this (0..255) is a hole (a cut-out's clear part).
     pub alpha_cut: f32,
     /// Empty pixels around the drawing, in pixels of the supersampled picture.
@@ -191,6 +199,8 @@ impl Default for Look {
             chasm_reach: 10.0,
             chasm_seam: 0.5,
             roof: RoofRule::default(),
+            roof_ground_reach: 1.25,
+            roof_ground_width: 12.0,
             alpha_cut: 90.0,
             padding: 8.0,
         }
@@ -216,6 +226,35 @@ pub enum Roof {
     Keep,
     /// Cut every area this many metres over its floor (the rule of [`Look::roof`] with this height); 0 or less keeps the roof.
     Over(f32),
+    /// Cut everything more than this many metres over the ground under it (the walkmesh's top, [`Look::roof_ground_reach`];
+    /// `docs/area-iso.md`, "Following the ground"), so raised ground keeps its own ground and loses its own trees and roofs; 0 or
+    /// less keeps the roof.
+    Ground(f32),
+}
+
+impl Roof {
+    /// `auto`, `keep`, metres over the floor (`2`), or `ground:` and metres over the ground (`ground:2`).
+    pub fn parse(s: &str) -> Result<Roof> {
+        let metres = |m: &str| m.trim().parse::<f32>().ok().filter(|m| m.is_finite());
+        match s.trim() {
+            "auto" => Ok(Roof::Auto),
+            "keep" => Ok(Roof::Keep),
+            g if g.starts_with("ground:") => {
+                metres(&g["ground:".len()..]).map(Roof::Ground).context("roof: ground:<metres over the ground>, as ground:2")
+            }
+            m => metres(m).map(Roof::Over).context("roof: auto, keep, metres over the floor or ground:<metres>"),
+        }
+    }
+
+    /// The roof as options and manifests write it: `"auto"`, `"keep"`, the metres as a number, or `"ground:<metres>"`.
+    pub fn to_value(self) -> serde_json::Value {
+        match self {
+            Roof::Auto => "auto".into(),
+            Roof::Keep => "keep".into(),
+            Roof::Over(m) => output::shortest(&m),
+            Roof::Ground(m) => format!("ground:{m}").into(),
+        }
+    }
 }
 
 /// What is behind the drawing.
@@ -348,8 +387,10 @@ pub struct Depth {
 pub struct Rendered {
     /// One picture a view, in [`IsoOptions::views`]' order.
     pub pictures: Vec<Picture>,
-    /// Where the roof was cut, if it was.
+    /// Where the roof was cut, if it was flat.
     pub roof_cut: Option<RoofCut>,
+    /// With [`Roof::Ground`]: the metres over the ground above which everything was cut away.
+    pub roof_over_ground: Option<f32>,
     /// The region drawn, clamped to the area ([`IsoOptions::region`]); None when the whole area was.
     pub region: Option<Region>,
     /// What looked wrong in the pictures (a texture drawn nearly white over much of a picture).
@@ -376,6 +417,8 @@ pub struct Prepared {
     water: Vec<Face>,
     size: [f32; 2],
     roof_cut: Option<RoofCut>,
+    /// With [`Roof::Ground`]: the cut that follows the ground, and its metres over it.
+    ground_cut: Option<(ground::GroundCut, f32)>,
     lights: ([f32; 3], [f32; 3]),
     chasm: ChasmField,
     /// With a region: the region, clamped to the area ([`Prepared::region`]).
@@ -404,12 +447,19 @@ pub fn prepare(scene: &Scene, o: &IsoOptions) -> Result<Prepared> {
         Roof::Auto => scene.roof_cut(&look.roof),
         Roof::Keep => None,
         Roof::Over(m) if m > 0.0 => Some(scene.probe.stats().roof_cut(&RoofRule { over: m, ..look.roof })),
-        Roof::Over(_) => None,
+        Roof::Over(_) | Roof::Ground(_) => None,
+    };
+    let ground_cut = match o.roof {
+        Roof::Ground(m) if m > 0.0 => {
+            ground::GroundCut::new(&scene.probe, m, look.roof_ground_width, look.roof_ground_reach).map(|g| (g, m))
+        }
+        _ => None,
     };
     // (The water too: a cave's water at the rock's top would otherwise cover the floors cut open under it.)
-    let (triangles, water) = match roof_cut {
-        Some(c) => (crate::area::cut(scene.triangles.clone(), c.at), cut_water(&scene.water, c.at)),
-        None => (scene.triangles.clone(), scene.water.clone()),
+    let (triangles, water) = match (roof_cut, &ground_cut) {
+        (Some(c), _) => (crate::area::cut(scene.triangles.clone(), c.at), cut_water(&scene.water, c.at)),
+        // (A cut along the ground is made where the triangles are drawn.)
+        (None, _) => (scene.triangles.clone(), scene.water.clone()),
     };
     let (amb, dif) = match o.light {
         Light::Day => (look.day_ambient, look.day_diffuse),
@@ -440,6 +490,7 @@ pub fn prepare(scene: &Scene, o: &IsoOptions) -> Result<Prepared> {
         water,
         size: scene.size(),
         roof_cut,
+        ground_cut,
         lights,
         chasm,
         region,
@@ -503,7 +554,7 @@ impl Prepared {
             }
             pictures.push(d.picture);
         }
-        Rendered { pictures, roof_cut: self.roof_cut, region: self.region, notes }
+        Rendered { pictures, roof_cut: self.roof_cut, roof_over_ground: self.ground_cut.as_ref().map(|g| g.1), region: self.region, notes }
     }
 }
 

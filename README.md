@@ -106,7 +106,7 @@ line per area and view) and `index.json`.
 | `--background transparent\|#rrggbb` | `transparent` | |
 | `--light day\|area` | `day` | Plain daylight, or the area's own sun colours |
 | `--shadows on\|off` | `on` | |
-| `--roof auto\|keep\|<metres>` | `auto` | Interiors and underground areas are cut open over their floor; `keep` never cuts |
+| `--roof auto\|keep\|<metres>\|ground:<metres>` | `auto` | Interiors and underground areas are cut open over their floor; `keep` never cuts; metres cut every area at one height over its floor; `ground:2` cuts what is more than 2 m over the ground under it, so raised ground keeps its ground ([Following the ground](docs/area-iso.md#following-the-ground)) |
 | `--exposure auto\|off` | `auto` | Dark areas lifted |
 | `--objects on\|off` | `on` | Placeables and doors |
 | `--depth` | | Also a 16-bit height picture per view |

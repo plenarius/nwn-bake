@@ -587,6 +587,10 @@ impl Scene {
             h.update(f.map_or(u32::MAX, f32::to_bits).to_le_bytes());
         }
         h.update(self.probe.blocked.iter().map(|&b| u8::from(b)).collect::<Vec<u8>>());
+        text(&mut h, "walkmesh top");
+        for t in &self.probe.walkmesh_top {
+            h.update(t.map_or(u32::MAX, f32::to_bits).to_le_bytes());
+        }
         h.update((self.notes.len() as u64).to_le_bytes());
         for n in &self.notes {
             text(&mut h, n);

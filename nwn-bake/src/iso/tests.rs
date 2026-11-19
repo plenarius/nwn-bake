@@ -345,3 +345,132 @@ fn a_picture_too_large_fails_before_anything_is_allocated() {
     let e = format!("{e:#}");
     assert!(e.contains("at most 16383 a side"), "{e}");
 }
+
+/// A 2 by 2 tile area on two levels: blue ground at 0 m west of x = 10 m, a green plateau at 6 m east of it whose walkmesh does not
+/// walk (so the probe's walkable ground is 0 m everywhere, and only its walkmesh top is 6 m), with a red 1 m square on each of
+/// `markers`.
+fn two_levels(markers: &[[f32; 3]]) -> Scene {
+    let mut s = scene(markers, 4);
+    s.textures.push(texture("green", [0, 200, 0, 255]));
+    s.triangles.splice(0..2, quad(0.0, 0.0, 10.0, 20.0, 0.0, 0).into_iter().chain(quad(10.0, 0.0, 20.0, 20.0, 6.0, 2)));
+    let probe = &mut s.probe;
+    probe.walkmesh_top = (0..probe.nx * probe.ny).map(|k| Some(if probe.sample_x(k % probe.nx) < 10.0 { 0.0 } else { 6.0 })).collect();
+    s
+}
+
+/// The colour of the top view's pixel over game point (`x`, `y`).
+fn top_pixel(p: &Picture, x: f32, y: f32) -> [u8; 4] {
+    let [u, v] = p.transform.project([x, y, 0.0]);
+    if u < 0.0 || v < 0.0 || u >= p.width as f32 || v >= p.height as f32 {
+        return [0; 4];
+    }
+    let c = &p.rgba[(v as usize * p.width as usize + u as usize) * 4..][..4];
+    [c[0], c[1], c[2], c[3]]
+}
+
+/// Which of the scene's colours a pixel shows: `r`, `g`, `b`, or `-` for nothing.
+fn hue(c: [u8; 4]) -> char {
+    match c {
+        [.., 0] => '-',
+        [r, g, b, _] if r > g && r > b => 'r',
+        [_, g, b, _] if g > b => 'g',
+        _ => 'b',
+    }
+}
+
+#[test]
+fn the_roof_cut_along_the_ground_keeps_each_levels_ground_and_cuts_its_roof() {
+    // On the low ground, markers at 1 m (kept) and 3 m (cut); on the plateau, at 7 m (kept) and 9 m (cut).
+    let s = two_levels(&[[5.0, 5.0, 1.0], [5.0, 15.0, 3.0], [15.0, 5.0, 7.0], [15.0, 15.0, 9.0]]);
+    let at = |r: &Rendered| {
+        [(5.0, 5.0), (5.0, 15.0), (15.0, 5.0), (15.0, 15.0), (5.0, 10.0), (15.0, 10.0)].map(|(x, y)| hue(top_pixel(&r.pictures[0], x, y)))
+    };
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) }).unwrap();
+    assert_eq!(at(&r), ['r', 'b', 'r', 'g', 'b', 'g']);
+    assert_eq!((r.roof_cut, r.roof_over_ground), (None, Some(2.0)));
+    // One flat cut 2 m over the floor (0 m) takes the plateau too.
+    let r = render(&s, &IsoOptions { roof: Roof::Over(2.0), ..plain(vec![View::Top]) }).unwrap();
+    assert_eq!(at(&r), ['r', 'b', '-', '-', 'b', '-']);
+    // With shadows and in every view it draws, and 0 keeps the roof.
+    assert!(render(&s, &IsoOptions { roof: Roof::Ground(2.0), shadows: true, ..plain(ALL.to_vec()) }).is_ok());
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(0.0), ..plain(vec![View::Top]) }).unwrap();
+    assert_eq!(at(&r)[3], 'r');
+    assert_eq!(r.roof_over_ground, None);
+}
+
+#[test]
+fn a_triangle_across_the_cut_is_cut_along_it() {
+    // A red ramp on the low ground from 1 m at x = 2 m to 3 m at x = 8 m: cut at 2 m, at x = 5 m.
+    let mut s = two_levels(&[]);
+    s.triangles.extend(quad(2.0, 4.0, 8.0, 6.0, 0.0, 1).map(|mut t| {
+        t.p.iter_mut().for_each(|p| p[2] = 1.0 + (p[0] - 2.0) / 3.0);
+        t
+    }));
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) }).unwrap();
+    let p = &r.pictures[0];
+    assert_eq!([3.0, 4.8, 5.2, 7.0].map(|x| hue(top_pixel(p, x, 5.0))), ['r', 'r', 'b', 'b']);
+}
+
+#[test]
+fn the_cut_along_the_ground_falls_back_on_the_probe_and_leaves_no_hole_in_the_top_view() {
+    // No walkmesh face in the north-west quarter: the probe's ground (0 m) stands in, and a marker at 3 m there is cut.
+    let mut s = two_levels(&[[5.0, 15.0, 3.0]]);
+    let probe = &mut s.probe;
+    for k in 0..probe.nx * probe.ny {
+        if probe.sample_x(k % probe.nx) < 10.0 && probe.sample_y(k / probe.nx) > 10.0 {
+            probe.walkmesh_top[k] = None;
+        }
+    }
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) }).unwrap();
+    assert_eq!(hue(top_pixel(&r.pictures[0], 5.0, 15.0)), 'b');
+    // A probe without walkmesh tops at all (made by hand) is cut over its ground, 0 m: the plateau is cut away, but nothing else is
+    // under it, so the top view draws the lowest of what was cut there and has no hole; the corner views do not.
+    s.probe.walkmesh_top.clear();
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top, View::Sw]) }).unwrap();
+    assert_eq!(hue(top_pixel(&r.pictures[0], 15.0, 10.0)), 'g');
+    let green = |p: &Picture| p.rgba.as_chunks::<4>().0.iter().filter(|c| c[3] > 0 && c[1] > c[2]).count();
+    assert_eq!(green(&r.pictures[1]), 0, "the sw view draws what was cut");
+}
+
+#[test]
+fn a_small_raised_patch_of_walkmesh_is_a_building_not_ground() {
+    // A building's block in the middle of the low ground: walkmesh 4 m up over 5 by 5 m, its roof (red) at 4.5 m and its floor (the
+    // blue ground) under it. The roof is cut; the plateau, as wide as the area, is still ground.
+    let mut s = two_levels(&[[5.0, 10.0, 4.5]]);
+    let probe = &mut s.probe;
+    for k in 0..probe.nx * probe.ny {
+        let (x, y) = (probe.sample_x(k % probe.nx), probe.sample_y(k / probe.nx));
+        if (2.5..7.5).contains(&x) && (7.5..12.5).contains(&y) {
+            probe.walkmesh_top[k] = Some(4.0);
+        }
+    }
+    let r = render(&s, &IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) }).unwrap();
+    assert_eq!([(5.0, 10.0), (15.0, 10.0)].map(|(x, y)| hue(top_pixel(&r.pictures[0], x, y))), ['b', 'g']);
+}
+
+#[test]
+fn the_roof_parses_and_is_written_as_given() {
+    assert_eq!(Roof::parse("auto").unwrap(), Roof::Auto);
+    assert_eq!(Roof::parse("keep").unwrap(), Roof::Keep);
+    assert_eq!(Roof::parse("-2").unwrap(), Roof::Over(-2.0));
+    assert_eq!(Roof::parse("ground:2.5").unwrap(), Roof::Ground(2.5));
+    for bad in ["ground:", "ground:high", "ground:inf", "high", ""] {
+        assert!(Roof::parse(bad).is_err(), "{bad:?}");
+    }
+    assert_eq!(Roof::Ground(2.0).to_value(), "ground:2");
+    assert_eq!(Roof::Ground(1.5).to_value(), "ground:1.5");
+    assert_eq!(Roof::Over(2.0).to_value(), serde_json::json!(2.0));
+    // The manifest says how high over the ground it cut, and has no flat cut.
+    let s = two_levels(&[]);
+    let o = IsoOptions { roof: Roof::Ground(2.0), ..plain(vec![View::Top]) };
+    let r = render(&s, &o).unwrap();
+    let m = serde_json::to_value(manifest(&s, None, Inputs::default(), &r, &o, &OutOptions::new("unused"))).unwrap();
+    assert_eq!(
+        (&m["options"]["roof"], &m["roof_cut_m"], &m["roof_over_ground_m"]),
+        (&"ground:2".into(), &serde_json::Value::Null, &2.0.into())
+    );
+    // Without it, the field is left out, so the manifests of the other roofs are as they were.
+    let r = render(&s, &plain(vec![View::Top])).unwrap();
+    let m = serde_json::to_value(manifest(&s, None, Inputs::default(), &r, &plain(vec![View::Top]), &OutOptions::new("unused"))).unwrap();
+    assert!(m.get("roof_over_ground_m").is_none());
+}

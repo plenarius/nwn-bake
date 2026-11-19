@@ -65,13 +65,17 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
   null when the area has none. `haks` is the list the game was opened with, first highest; `missing_haks` those found nowhere.
 - `resources`, `key`, `quick_key`: the digest of every resource the scene looked up, the exact key and the quick key (see "Keys"
   below). `quick_key` is null when the run made no quick keys (named areas with no `--cache`).
-- `options`: the options in effect. `quality` is the supersampling, set with `--supersample`. `roof` is `"auto"`, `"keep"` or the
-  metres over the floor given; `look` is `"default"`, or the whole set of calibration constants when `--look` changed any;
-  `format` is `"webp"` or `"png"`, with `webp_quality` for WebP; `depth` whether there are depth pictures; `region` and `marks`
-  the close-up's rectangle and rings, left out without them (see "Close-ups and marks").
-- `roof_cut_m`: the height (metres) above which everything was cut away, or null when the roof was kept. Interiors and underground
+- `options`: the options in effect. `quality` is the supersampling, set with `--supersample`. `roof` is `"auto"`, `"keep"`, the
+  metres over the floor given, or `"ground:<metres>"` for the cut that follows the ground (see "Following the ground"); `look`
+  is `"default"`, or the whole set of calibration constants when `--look` changed any; `format` is `"webp"` or `"png"`, with
+  `webp_quality` for WebP; `depth` whether there are depth pictures; `region` and `marks` the close-up's rectangle and rings, left
+  out without them (see "Close-ups and marks").
+- `roof_cut_m`: the height (metres) above which everything was cut away, or null when the roof was kept or cut along the ground.
+  Interiors and underground
   areas are cut 3.5 m over their median floor, or, when they are a cave dug out of rock (more than a quarter of the ground at the top,
   at least 8% drawn floor 2 m or more under it), 1 to 2 m over their highest floor.
+- `roof_over_ground_m`: with `--roof ground:<metres>`, the metres over the ground above which everything was cut away. Left out
+  otherwise, so the manifests of the other roofs are as they were.
 - A tileset's black void (tile faces whose texture is black all over) is not drawn, so it shows the background. The picture's size and
   `matrix` still take it into account, as if it were drawn.
 - A chasm's floor is drawn in a dark blue-grey, darker the further it is from the nearest ground (`chasm_edge`, `chasm_deep`,
@@ -110,6 +114,38 @@ scene and the exposure, so its colour is the one asked for. A ring is drawn wher
 too. The depth pictures do not show the rings. The manifest's `options.marks` lists them, as `{"at": [x, y], "colour": "#rrggbb"}`.
 
 `--region` and `--mark` take one area: with `--all` or several areas they are misuse. Both are part of the options, so of the keys.
+
+## Following the ground
+
+`--roof <metres>` cuts the whole area at one height: that many metres over its floor (the median of its ground). Raised ground
+higher than that, a plateau or a hill, is cut away with its trees and roofs, and leaves holes. `--roof ground:<metres>` cuts
+instead, at each point, what is more than that many metres over the ground there, so each level keeps its own ground and loses
+its own trees and roofs. With `--objects off --view top --roof ground:2`, the picture shows the ground, the roads and paths, low
+walls and the insides of buildings, from the top.
+
+- **The ground** is the top of the tiles' walkmeshes, walked or not, every 0.625 m (the floor probe's samples): it follows a cliff's
+  slope and a plateau's top as the walkmesh has them, and stays at a tree's foot, whose walkmesh is its footprint.
+- **Buildings.** A tile's building can have a walkmesh block that does not walk, as high as its eaves. A raised patch of walkmesh
+  (more than 1 m over the walkable ground around it) that fits in a square of `roof_ground_width` metres (12 by default) and does
+  not reach the area's edge is taken for one: there the walkable ground around it counts, so its roof is cut. A building wider
+  than that keeps its roof; a plateau narrower than that, inside the area, loses its top (the next rule draws it back in the top
+  view).
+- **Where there is no walkmesh** (black void, a hole in a tile), the floor probe's ground counts: the walkable faces around, filled
+  in across the gap within the tile, else the tile's own height. This is the ground `--mark` stands its rings on, and the nearest
+  thing to "the nearest floor" the probe has; one flat cut for the whole area would cut a void tile's surroundings at a height
+  that has nothing to do with them.
+- **Cliffs.** Each point takes the highest ground within `roof_ground_reach` metres of it (1.25 by default), so a cliff's face,
+  drawn a little outside its walkmesh, is not cut where it hangs over the ground below.
+- **No holes in the top view.** The cut is made where each triangle is drawn, at each sample of the picture and of the shadow map:
+  a triangle across the line is cut along it, not dropped whole, and what is cut away casts no shadow. Where the top view would
+  then show nothing over the area (raised ground whose drawn mesh stands more than the cut over its walkmesh, a building with no
+  floor under its roof), it draws the lowest of what was cut away there instead, so the cut leaves no hole where the picture
+  without it has none. The corner views do not: their empty samples are mostly the background past the area's edge.
+- The picture's frame fits what is left, as with a flat cut. Water is cut along the ground too.
+
+`roof_cut_m` is then null and `roof_over_ground_m` holds the metres. `roof_ground_width` and `roof_ground_reach` are part of the
+look (`--look`). `ground:0` or less keeps the roof. On a 13 by 12 tile area, the top view at the default scale takes about 6 s
+instead of 4 s with the flat cut.
 
 ## Game coordinates and pixels
 
