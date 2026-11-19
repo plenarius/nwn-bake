@@ -4,6 +4,15 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.6.0 (2026-11-19)
+
+- **`area-iso --roof ground:<metres>`: a roof cut that follows the ground** (#13). At each point it cuts what is more than that
+  many metres over the ground there, instead of one flat height for the whole area, so raised ground keeps its own floor and
+  loses its own trees and roofs. The ground is the top of the tile walkmeshes; under water it is the water's surface; a small
+  raised walkmesh patch (up to 12 m, `roof_ground_width` in `--look`) is taken as a building and measured from the ground around
+  it. In the top view a spot the cut leaves empty shows the lowest of what was cut there. The manifest has it in `options.roof`
+  (`"ground:2"`) and the new `roof_over_ground_m`; it is part of the keys. Pictures drawn without it are unchanged.
+
 ## 0.5.2 (2026-11-18)
 
 - **`STYLE.md`: measured layout data is CC0-1.0**, described as measurements taken on a real game install rather than marked as
