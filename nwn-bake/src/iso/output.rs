@@ -9,7 +9,7 @@ use anyhow::{Context, Result, bail};
 use serde::Serialize;
 
 use super::region::MarkInfo;
-use super::{Background, Depth, IsoOptions, Light, Look, Picture, Rendered, Roof, View};
+use super::{Background, Depth, IsoOptions, Light, Look, Picture, Rendered, View};
 use crate::area::{Kind, Scene};
 
 /// The manifest's format name (see `docs/area-iso.md`).
@@ -178,8 +178,12 @@ pub struct Manifest {
     pub quick_key: Option<String>,
     /// The options in effect.
     pub options: OptionsInfo,
-    /// Where the roof was cut (metres), if it was.
+    /// Where the roof was cut (metres), if it was cut flat; null when it was kept or cut along the ground.
     pub roof_cut_m: Option<f32>,
+    /// With a roof cut along the ground (`roof` `"ground:<metres>"`): the metres over the ground above which everything was cut
+    /// away. Left out otherwise.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub roof_over_ground_m: Option<f32>,
     /// With `--region`: the rectangle drawn, `[x0, y0, x1, y1]` in metres, the region asked for clamped to the area. Left out
     /// without one.
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -277,11 +281,7 @@ impl OptionsInfo {
             quality: o.quality,
             light: o.light,
             shadows: o.shadows,
-            roof: match o.roof {
-                Roof::Auto => "auto".into(),
-                Roof::Keep => "keep".into(),
-                Roof::Over(m) => shortest(&m),
-            },
+            roof: o.roof.to_value(),
             exposure: if o.exposure { "auto" } else { "off" },
             objects,
             background: match o.background {
@@ -300,7 +300,7 @@ impl OptionsInfo {
 
 /// `value` as JSON with its `f32`s in their shortest form (0.35, not the 0.3499999940395355 that `serde_json::to_value` widens
 /// it to): through text, which writes an `f32` as `f32`.
-fn shortest(value: &impl Serialize) -> serde_json::Value {
+pub(super) fn shortest(value: &impl Serialize) -> serde_json::Value {
     serde_json::to_string(value).ok().and_then(|t| serde_json::from_str(&t).ok()).unwrap_or_default()
 }
 
@@ -357,6 +357,7 @@ pub fn manifest(scene: &Scene, name: Option<String>, inputs: Inputs, rendered: &
         quick_key: None,
         options: OptionsInfo::of(o, scene.objects, out.format),
         roof_cut_m: rendered.roof_cut.map(|c| c.at),
+        roof_over_ground_m: rendered.roof_over_ground,
         region_m: rendered.region.map(super::Region::corners),
         views: rendered
             .pictures

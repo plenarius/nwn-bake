@@ -252,6 +252,7 @@ fn every_manifest_written_validates_against_the_schema() {
             scale: 3.0,
             ..Default::default()
         },
+        IsoOptions { views: vec![View::Top, View::Sw], roof: Roof::Ground(2.0), ..Default::default() },
     ];
     let mut checked = 0;
     for (i, o) in variants.iter().enumerate() {
@@ -274,7 +275,7 @@ fn every_manifest_written_validates_against_the_schema() {
             checked += 1;
         }
     }
-    assert_eq!(checked, 3 * fixture::AREAS.len());
+    assert_eq!(checked, 4 * fixture::AREAS.len());
 
     // And the schema says no to what is not a manifest v1.
     let mut m: serde_json::Value = serde_json::from_slice(&std::fs::read(out.dir.join("fx_main.json")).unwrap()).unwrap();

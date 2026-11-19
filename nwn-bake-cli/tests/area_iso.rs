@@ -214,6 +214,14 @@ fn the_options_are_drawn_and_written_into_the_manifest() {
     // The roof given in metres, and the cave's own cut.
     ok(&run(&f, &["area-iso", s(&f.module_mod()), "fx_flat", "--out", s(&out), "--view", "top", "--roof", "1.25", "--format", "png"]));
     assert_eq!(read_json(&out.join("fx_flat.json"))["roof_cut_m"].as_f64(), Some(1.25));
+    // The roof cut along the ground: no flat cut, and how high over the ground it cut.
+    ok(&run(&f, &["area-iso", s(&f.module_mod()), "fx_main", "--out", s(&out), "--view", "top", "--roof", "ground:2", "--format", "png"]));
+    let m = read_json(&out.join("fx_main.json"));
+    valid(&v, &m);
+    assert_eq!(
+        (m["options"]["roof"].as_str(), m["roof_cut_m"].is_null(), m["roof_over_ground_m"].as_f64()),
+        (Some("ground:2"), true, Some(2.0))
+    );
     ok(&run(&f, &["area-iso", s(&f.module_mod()), "fx_cave", "--out", s(&out), "--view", "top", "--format", "png"]));
     let cave = read_json(&out.join("fx_cave.json"));
     assert_eq!((cave["roof_cut_m"].as_f64(), cave["area"]["kind"].as_str()), (Some(2.0), Some("underground")));

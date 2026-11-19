@@ -5,6 +5,7 @@
 
 use std::time::Duration;
 
+use super::ground::GroundCut;
 use super::shadows::Shadows;
 use super::{Background, Depth, Look, Picture, Prepared, Transform, View};
 use crate::area::Triangle;
@@ -18,6 +19,11 @@ pub(super) struct DrawTri<'a> {
     pub(super) tex: Option<&'a Mipped>,
     /// A chasm's floor: its corners where the scene has them (not turned), to look up its colour.
     chasm: Option<[[f32; 3]; 3]>,
+    /// With the roof cut along the ground, a triangle that may cross it: its corners where the scene has them (not turned), to test
+    /// each sample against the cut ([`GroundCut::keeps`]).
+    pub(super) ground: Option<[[f32; 3]; 3]>,
+    /// Wholly above the cut: only drawn where the cut leaves nothing else, and casts no shadow.
+    pub(super) above: bool,
 }
 
 /// A view's camera and light, in the turned frame.
@@ -109,10 +115,24 @@ pub(super) struct Frame {
 pub(super) fn frame(prep: &Prepared, camera: &Camera) -> Frame {
     let ss = prep.o.quality as usize;
     let scale = prep.o.scale * ss as f32;
-    let water = prep.water.iter().flatten();
+    // (With the roof cut along the ground, each triangle cut flat at the highest the cut goes over it: the frame fits what is left.
+    // The top view also draws what was cut where nothing is left within the area, so there its corners count, moved into the area.)
+    let below = |t: &[[f32; 3]; 3]| -> Vec<[f32; 3]> {
+        match &prep.ground_cut {
+            Some((g, _)) => {
+                let tri = Triangle { p: *t, uv: [[0.0; 2]; 3], texture: 0, part: crate::area::Part::Tile(0), chasm: false };
+                let mut kept: Vec<[f32; 3]> = crate::area::cut(vec![tri], g.range(t).1).iter().flat_map(|t| t.p).collect();
+                if camera.view == View::Top && g.crosses(t) {
+                    kept.extend(t.map(|p| [p[0].clamp(0.0, prep.size[0]), p[1].clamp(0.0, prep.size[1]), p[2]]));
+                }
+                kept
+            }
+            None => t.to_vec(),
+        }
+    };
     let (mut lo, mut hi) = ([f32::MAX; 2], [f32::MIN; 2]);
-    for p in prep.triangles.iter().flat_map(|t| t.p.iter()).chain(water) {
-        let q = camera.project(camera.turn(*p), scale);
+    for p in prep.triangles.iter().map(|t| below(&t.p)).chain(prep.water.iter().map(below)).flatten() {
+        let q = camera.project(camera.turn(p), scale);
         lo = [lo[0].min(q[0]), lo[1].min(q[1])];
         hi = [hi[0].max(q[0]), hi[1].max(q[1])];
     }
@@ -142,6 +162,9 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
     // transform do not depend on them.
     let void: Vec<bool> = prep.textures.iter().map(|t| t.image.as_deref().is_some_and(Mipped::is_black)).collect();
     let is_void = |t: &Triangle| matches!(t.part, crate::area::Part::Tile(_)) && void.get(t.texture as usize).copied().unwrap_or(false);
+    let cut: Option<&GroundCut> = prep.ground_cut.as_ref().map(|g| &g.0);
+    let ground = |p: &[[f32; 3]; 3]| cut.filter(|g| g.crosses(p)).map(|_| *p);
+    let above = |p: &[[f32; 3]; 3]| cut.is_some_and(|g| p[0][2].min(p[1][2]).min(p[2][2]) > g.range(p).1);
     let tris: Vec<DrawTri<'_>> = triangles
         .iter()
         .filter(|t| !is_void(t))
@@ -151,9 +174,11 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
             texture: t.texture,
             tex: prep.textures.get(t.texture as usize).and_then(|x| x.image.as_deref()),
             chasm: t.chasm.then_some(t.p),
+            ground: ground(&t.p),
+            above: above(&t.p),
         })
         .collect();
-    let water: Vec<[[f32; 3]; 3]> = water.iter().map(|t| t.map(|p| camera.turn(p))).collect();
+    let water: Vec<([[f32; 3]; 3], Option<[[f32; 3]; 3]>)> = water.iter().map(|t| (t.map(|p| camera.turn(p)), ground(t))).collect();
     let (cam, l) = (camera.cam, camera.light);
     // (A region's shadows are cast by what stands around it as well, so a tree 5 m outside it still shades its ground.)
     let casters: Option<Vec<DrawTri<'_>>> = prep.casters.as_ref().filter(|_| o.shadows).map(|c| {
@@ -165,10 +190,12 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
                 texture: t.texture,
                 tex: prep.textures.get(t.texture as usize).and_then(|x| x.image.as_deref()),
                 chasm: None,
+                ground: ground(&t.p),
+                above: above(&t.p),
             })
             .collect()
     });
-    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), l, scale, look, look.alpha_cut));
+    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), l, scale, look, look.alpha_cut, cut));
     drop(casters);
     let bias = shadows.as_ref().map_or(look.shadow_bias, |s| look.shadow_bias.max(2.0 * s.cell));
     let project = |p: [f32; 3]| camera.project(p, scale);
@@ -188,77 +215,106 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
     let mut measured = vec![[0u8; 3]; w * h];
     // With depth pictures: the game height of what each sample shows.
     let mut zs = if o.depth { vec![0f32; w * h] } else { Vec::new() };
-    for t in &tris {
-        let q = t.p.map(project);
-        let (xs, ys) = (q.map(|q| sx(&q)), q.map(|q| sy(&q)));
-        // The face's light.
-        let mut n = norm(cross(sub(t.p[1], t.p[0]), sub(t.p[2], t.p[0])));
-        if dot(n, cam) < 0.0 {
-            n = n.map(|c| -c);
+    // With the roof cut along the ground, a second pass over the triangles it crosses: where the first left a sample empty (raised
+    // ground over the walkmesh by more than the cut, a building with no floor under its roof), the lowest of what was cut away there
+    // is drawn, within the area, so the cut leaves no hole where the picture without it has none. In the top view only: there every
+    // sample over the area shows ground, while a corner view's empty samples are mostly the background past the area's edge.
+    let mut empty: Vec<bool> = Vec::new();
+    let mut lowest: Vec<f32> = Vec::new();
+    for fill in [false, true] {
+        if fill {
+            if cut.is_none() || camera.view != View::Top {
+                break;
+            }
+            empty = alpha.iter().map(|&a| a == 0).collect();
+            lowest = vec![f32::MAX; w * h];
         }
-        let ndl = dot(n, l).max(0.0);
-        let Some(raster) = Raster::new(xs, ys, w, h) else { continue };
-        // Which mip level: how many texels one pixel of this triangle covers.
-        let lod = match t.tex {
-            Some(tx) => {
-                let base = &tx.levels[0];
-                let uv_area =
-                    ((t.uv[1][0] - t.uv[0][0]) * (t.uv[2][1] - t.uv[0][1]) - (t.uv[2][0] - t.uv[0][0]) * (t.uv[1][1] - t.uv[0][1])).abs()
+        for t in tris.iter().filter(|t| if fill { t.ground.is_some() } else { !t.above }) {
+            let q = t.p.map(project);
+            let (xs, ys) = (q.map(|q| sx(&q)), q.map(|q| sy(&q)));
+            // The face's light.
+            let mut n = norm(cross(sub(t.p[1], t.p[0]), sub(t.p[2], t.p[0])));
+            if dot(n, cam) < 0.0 {
+                n = n.map(|c| -c);
+            }
+            let ndl = dot(n, l).max(0.0);
+            let Some(raster) = Raster::new(xs, ys, w, h) else { continue };
+            // Which mip level: how many texels one pixel of this triangle covers.
+            let lod = match t.tex {
+                Some(tx) => {
+                    let base = &tx.levels[0];
+                    let uv_area = ((t.uv[1][0] - t.uv[0][0]) * (t.uv[2][1] - t.uv[0][1])
+                        - (t.uv[2][0] - t.uv[0][0]) * (t.uv[1][1] - t.uv[0][1]))
+                        .abs()
                         * (base.width * base.height) as f32;
-                (0.5 * (uv_area / (raster.den.abs() * 0.5)).max(1e-6).log2()).max(0.0)
-            }
-            None => 0.0,
-        };
-        raster.each(|x, y, b| {
-            let d = b[0] * q[0][2] + b[1] * q[1][2] + b[2] * q[2][2];
-            let idx = y * w + x;
-            if d >= depth[idx] {
-                return;
-            }
-            let rgba = match t.tex {
-                Some(tx) => tx.sample(
-                    b[0] * t.uv[0][0] + b[1] * t.uv[1][0] + b[2] * t.uv[2][0],
-                    b[0] * t.uv[0][1] + b[1] * t.uv[1][1] + b[2] * t.uv[2][1],
-                    lod,
-                    false,
-                ),
-                None => [128.0, 128.0, 128.0, 255.0],
-            };
-            if rgba[3] < look.alpha_cut {
-                return;
-            }
-            depth[idx] = d;
-            // The sun reaches it unless something is between: its position, looked up in the shadow map.
-            let lit = match &shadows {
-                Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias),
-                _ => 1.0,
-            };
-            let light = [0, 1, 2].map(|k| (amb[k] + dif[k] * ndl * lit).min(look.light_max));
-            measured[idx] = [0, 1, 2].map(|k| (rgba[k] * light[k]).min(255.0) as u8);
-            colour[idx] = match t.chasm {
-                Some(p) => {
-                    let c = chasm.colour(interpolate(&p, b));
-                    [0, 1, 2].map(|k| (c[k] * 255.0 * light[k]).min(255.0) as u8)
+                    (0.5 * (uv_area / (raster.den.abs() * 0.5)).max(1e-6).log2()).max(0.0)
                 }
-                None => measured[idx],
+                None => 0.0,
             };
-            alpha[idx] = 255;
-            owner[idx] = t.texture;
-            if !zs.is_empty() {
-                zs[idx] = interpolate(&t.p, b)[2];
-            }
-        });
+            raster.each(|x, y, b| {
+                let d = b[0] * q[0][2] + b[1] * q[1][2] + b[2] * q[2][2];
+                let idx = y * w + x;
+                let at = t.ground.map(|p| interpolate(&p, b));
+                if fill {
+                    let outside = |p: [f32; 3]| p[0] < 0.0 || p[1] < 0.0 || p[0] > prep.size[0] || p[1] > prep.size[1];
+                    if !empty[idx] || at.is_none_or(|p| p[2] >= lowest[idx] || outside(p)) {
+                        return;
+                    }
+                } else if d >= depth[idx] || cut.zip(at).is_some_and(|(g, p)| !g.keeps(p)) {
+                    return;
+                }
+                let rgba = match t.tex {
+                    Some(tx) => tx.sample(
+                        b[0] * t.uv[0][0] + b[1] * t.uv[1][0] + b[2] * t.uv[2][0],
+                        b[0] * t.uv[0][1] + b[1] * t.uv[1][1] + b[2] * t.uv[2][1],
+                        lod,
+                        false,
+                    ),
+                    None => [128.0, 128.0, 128.0, 255.0],
+                };
+                if rgba[3] < look.alpha_cut {
+                    return;
+                }
+                depth[idx] = d;
+                if let (true, Some(p)) = (fill, at) {
+                    lowest[idx] = p[2];
+                }
+                // The sun reaches it unless something is between: its position, looked up in the shadow map.
+                let lit = match &shadows {
+                    Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias),
+                    _ => 1.0,
+                };
+                let light = [0, 1, 2].map(|k| (amb[k] + dif[k] * ndl * lit).min(look.light_max));
+                measured[idx] = [0, 1, 2].map(|k| (rgba[k] * light[k]).min(255.0) as u8);
+                colour[idx] = match t.chasm {
+                    Some(p) => {
+                        let c = chasm.colour(interpolate(&p, b));
+                        [0, 1, 2].map(|k| (c[k] * 255.0 * light[k]).min(255.0) as u8)
+                    }
+                    None => measured[idx],
+                };
+                alpha[idx] = 255;
+                owner[idx] = t.texture;
+                if !zs.is_empty() {
+                    zs[idx] = interpolate(&t.p, b)[2];
+                }
+            });
+        }
     }
     // The water over it, once per pixel: its nearest face in front of what was drawn, blended, no depth written.
     if !water.is_empty() {
         let mut wet = vec![f32::MAX; w * h];
-        for t in &water {
+        for (t, at) in &water {
             let q = t.map(project);
             let Some(raster) = Raster::new(q.map(|q| sx(&q)), q.map(|q| sy(&q)), w, h) else { continue };
             raster.each(|x, y, b| {
                 let d = b[0] * q[0][2] + b[1] * q[1][2] + b[2] * q[2][2];
                 let idx = y * w + x;
-                if d < depth[idx] && d < wet[idx] {
+                let kept = match (cut, at) {
+                    (Some(g), Some(p)) => g.keeps(interpolate(p, b)),
+                    _ => true,
+                };
+                if kept && d < depth[idx] && d < wet[idx] {
                     wet[idx] = d;
                     if !zs.is_empty() {
                         zs[idx] = interpolate(t, b)[2];

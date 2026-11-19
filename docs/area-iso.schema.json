@@ -194,7 +194,7 @@
           "type": "boolean"
         },
         "roof": {
-          "description": "\"auto\", \"keep\", or the metres over the floor given.",
+          "description": "\"auto\", \"keep\", the metres over the floor given, or \"ground:\" and the metres over the ground given (the cut that follows the ground).",
           "oneOf": [
             {
               "enum": [
@@ -204,6 +204,10 @@
             },
             {
               "type": "number"
+            },
+            {
+              "type": "string",
+              "pattern": "^ground:-?[0-9]+(\\.[0-9]+)?([eE][-+]?[0-9]+)?$"
             }
           ]
         },
@@ -290,11 +294,16 @@
       }
     },
     "roof_cut_m": {
-      "description": "The height (metres) above which everything was cut away; null when the roof was kept.",
+      "description": "The height (metres) above which everything was cut away; null when the roof was kept or cut along the ground.",
       "type": [
         "number",
         "null"
       ]
+    },
+    "roof_over_ground_m": {
+      "description": "With the roof cut along the ground (options.roof \"ground:<metres>\"): the metres over the ground above which everything was cut away. Left out otherwise.",
+      "type": "number",
+      "exclusiveMinimum": 0
     },
     "region_m": {
       "description": "With --region: the rectangle drawn, [x0, y0, x1, y1] in game metres, the region asked for clamped to the area. Left out without one.",

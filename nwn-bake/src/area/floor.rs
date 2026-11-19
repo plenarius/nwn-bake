@@ -62,6 +62,10 @@ pub struct FloorProbe {
     /// Whether a placeable of the `.git` blocks the sample: one of its walkmesh's (`.pwk`) unwalkable faces overlaps the sample's
     /// cell, the [`SPACING`] square about it. All false for a scene without objects.
     pub blocked: Vec<bool>,
+    /// The height of the topmost face of the tiles' walkmeshes at each sample, whether the game walks it or not (a rock top, a
+    /// cliff's slope, a building's footprint); None where no face is. What the roof cut that follows the ground measures from
+    /// (`docs/area-iso.md`, "Following the ground"). Empty in a probe made by hand.
+    pub walkmesh_top: Vec<Option<f32>>,
 }
 
 /// The floor file's first bytes ([`FloorProbe::floor_file`]).
@@ -145,6 +149,7 @@ impl FloorProbe {
             colours: vec![[0; 3]; nx * ny],
             floor: vec![None; nx * ny],
             blocked: vec![false; nx * ny],
+            walkmesh_top: vec![None; nx * ny],
         };
         for (t, tile) in tiles.iter().enumerate().take(width * height) {
             let (tx, ty) = (t % width, t / width);
@@ -157,7 +162,7 @@ impl FloorProbe {
                     let k = (ty * PER_TILE + cj) * nx + tx * PER_TILE + ci;
                     probe.heights[k] = heights[cj * ni + ci];
                     probe.colours[k] = colours[cj * ni + ci];
-                    probe.floor[k] = floor[cj * ni + ci];
+                    (probe.floor[k], probe.walkmesh_top[k]) = floor[cj * ni + ci];
                 }
             }
         }
@@ -352,8 +357,9 @@ fn overlapped(t: &[[f32; 2]; 3], xs: &[f32], ys: &[f32], half: f32, mut f: impl 
 
 /// One tile's walkable floor (`ni` by `nj` samples, rows from the south, as [`probe_tile`]'s): at each sample, the topmost face of
 /// the tile's walkmesh (`wok`, in the tile's own square) that covers it; its height when the game walks it, None when it does not or
-/// no face covers the sample. Of two faces at one height (a shared edge), a walkable one wins.
-fn floor_tile(wok: &[([Vec3; 3], bool)], ni: usize, nj: usize) -> Vec<Option<f32>> {
+/// no face covers the sample. Of two faces at one height (a shared edge), a walkable one wins. Second, that face's height whether it
+/// walks or not ([`FloorProbe::walkmesh_top`]).
+fn floor_tile(wok: &[([Vec3; 3], bool)], ni: usize, nj: usize) -> Vec<(Option<f32>, Option<f32>)> {
     let to_pixels = |v: Vec3| Vec3::new((v.x + TILE / 2.0) / TILE * RASTER as f32, (v.y + TILE / 2.0) / TILE * RASTER as f32, v.z);
     let mut top: Vec<Option<(f32, bool)>> = vec![None; ni * nj];
     for (f, walks) in wok {
@@ -367,7 +373,7 @@ fn floor_tile(wok: &[([Vec3; 3], bool)], ni: usize, nj: usize) -> Vec<Option<f32
             }
         });
     }
-    top.into_iter().map(|t| t.filter(|t| t.1).map(|t| t.0)).collect()
+    top.into_iter().map(|t| (t.filter(|t| t.1).map(|t| t.0), t.map(|t| t.0))).collect()
 }
 
 /// One tile's samples (`ni` by `nj`, rows from the south): heights and colours.
@@ -675,19 +681,22 @@ mod tests {
             (q([0.0, 3.0, 0.5], [5.0, 5.0, 0.5], [0.0, 5.0, 0.5]), true),
         ];
         let f = floor_tile(&wok, 16, 16);
-        let at = |i: usize, j: usize| f[j * 16 + i];
+        let at = |i: usize, j: usize| f[j * 16 + i].0;
         assert_eq!(at(0, 0), None);
         assert_eq!(at(5, 5), Some(1.0));
         assert_eq!(at(12, 5), None);
         assert_eq!(at(12, 15), Some(0.5));
+        // The walkmesh's top, walked or not: the wall's foot and the water's bed too.
+        let top = |i: usize, j: usize| f[j * 16 + i].1;
+        assert_eq!((top(0, 0), top(5, 5), top(12, 5), top(12, 15)), (Some(1.1), Some(1.0), Some(-2.0), Some(0.5)));
         // Of two faces at one height, the walkable one: a walkable face under the same spot as a blocking one 0.5 mm higher.
         let tie = vec![
             (q([-5.0, -5.0, 0.0005], [5.0, -5.0, 0.0005], [-5.0, 5.0, 0.0005]), false),
             (q([-5.0, -5.0, 0.0], [5.0, -5.0, 0.0], [-5.0, 5.0, 0.0]), true),
         ];
-        assert_eq!(floor_tile(&tie, 16, 16)[0], Some(0.0));
-        // No walkmesh: nothing walks.
-        assert!(floor_tile(&[], 17, 17).iter().all(Option::is_none));
+        assert_eq!(floor_tile(&tie, 16, 16)[0].0, Some(0.0));
+        // No walkmesh: nothing walks, and there is no top.
+        assert!(floor_tile(&[], 17, 17).iter().all(|f| f.0.is_none() && f.1.is_none()));
     }
 
     #[test]
@@ -710,6 +719,7 @@ mod tests {
             colours: vec![[0; 3]; n],
             floor: (0..n).map(|k| (k % 17 < 8).then_some(1.234)).collect(),
             blocked: vec![false; n],
+            walkmesh_top: vec![None; n],
         };
         // A placeable's block over x 2..3.3 m, y 2..3.3 m (two triangles): the cells of samples 3 to 5 each way (sample 3's runs
         // from 1.57 to 2.20 m, sample 6's from 3.45 m).

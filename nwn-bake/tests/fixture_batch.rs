@@ -351,6 +351,11 @@ fn the_keys_follow_the_options_and_the_inputs() {
     scaled.iso.scale = 6.0;
     let c = key(&scaled, "fx_main");
     assert!(c.0 != a.0 && c.1 != a.1 && c.2 == a.2, "{a:?} {c:?}");
+    // The roof cut 2 m over the floor and 2 m over the ground: other keys each.
+    let (mut flat, mut ground) = (job(&f.base.join("e"), None, 2), job(&f.base.join("g"), None, 2));
+    (flat.iso.roof, ground.iso.roof) = (nwn_bake::iso::Roof::Over(2.0), nwn_bake::iso::Roof::Ground(2.0));
+    let (e, g) = (key(&flat, "fx_main"), key(&ground, "fx_main"));
+    assert!(e.1 != a.1 && g.1 != a.1 && g.1 != e.1 && g.0 != e.0, "{e:?} {g:?}");
     // Another area: other keys.
     let d = key(&base, "fx_mark");
     assert!(d.0 != a.0 && d.1 != a.1 && d.2 != a.2);

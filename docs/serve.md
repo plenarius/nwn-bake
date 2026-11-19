@@ -116,7 +116,8 @@ texture's name, the image it means, its kind and how many triangles use it).
 Instead of `module` (anything `area-iso` takes) and `area`, a request may give the area's files: `are` and `git` (paths, binary
 or JSON; `git` defaults to the one beside the `.are`), with `haks` and `tlk` (else those of the nearest `module.ifo` above the area).
 The options are `area-iso`'s, by the same names (but `quality`, the supersampling, which is `--supersample` there) and with the same
-defaults: `views` (a list, or `"all,top"`), `scale`, `quality`, `light`, `shadows` (true or false), `roof`, `exposure`, `objects`,
+defaults: `views` (a list, or `"all,top"`), `scale`, `quality`, `light`, `shadows` (true or false), `roof` (`"auto"`, `"keep"`, metres, or
+`"ground:2"`), `exposure`, `objects`,
 `background`, `depth`, `format`, `look` (the constants that differ, as an object), `region` (`[x0, y0, x1, y1]`), `marks` (a list
 of strings as `--mark` takes them, `"41.2,17.5,#ff8000"`), `layout` (`tree`, the default, or `flat`), `force` and `strict`.
 Unknown fields are an error.

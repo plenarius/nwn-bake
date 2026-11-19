@@ -5,6 +5,7 @@
 
 use super::Look;
 use super::draw::{DrawTri, Raster, cross, dot, norm, sub};
+use super::ground::GroundCut;
 
 /// What the sun sees: for each cell of a flat picture taken along the light, how near the light the nearest surface is.
 pub(super) struct Shadows {
@@ -20,10 +21,18 @@ pub(super) struct Shadows {
 }
 
 impl Shadows {
-    /// The shadow map of `tris` for a picture drawn at `scale` pixels a metre (supersampled), sized as [`Look::shadow_size`] says.
-    pub(super) fn new(tris: &[DrawTri<'_>], light: [f32; 3], scale: f32, look: &Look, alpha_cut: f32) -> Shadows {
+    /// The shadow map of `tris` for a picture drawn at `scale` pixels a metre (supersampled), sized as [`Look::shadow_size`] says;
+    /// with the roof cut along the ground (`ground`), what is cut away casts no shadow.
+    pub(super) fn new(
+        tris: &[DrawTri<'_>],
+        light: [f32; 3],
+        scale: f32,
+        look: &Look,
+        alpha_cut: f32,
+        ground: Option<&GroundCut>,
+    ) -> Shadows {
         let (mut lo, mut hi) = ([f32::MAX; 3], [f32::MIN; 3]);
-        for p in tris.iter().flat_map(|t| t.p.iter()) {
+        for p in tris.iter().filter(|t| !t.above).flat_map(|t| t.p.iter()) {
             for k in 0..3 {
                 lo[k] = lo[k].min(p[k]);
                 hi[k] = hi[k].max(p[k]);
@@ -39,9 +48,9 @@ impl Shadows {
         let u = norm(cross([0.0, 0.0, 1.0], w));
         let v = cross(w, u);
         let mut s = Shadows { depth: vec![f32::MIN; size * size], size, cell: 2.0 * radius / size as f32, centre, radius, u, v, w };
-        for t in tris {
+        for t in tris.iter().filter(|t| !t.above) {
             // (A cut-out's clear parts let the light through: sampled at its own detail.)
-            let cut = t.tex.filter(|x| x.cutout);
+            let cutout = t.tex.filter(|x| x.cutout);
             let q = t.p.map(|p| s.to_light(p));
             let Some(raster) = Raster::new(q.map(|q| q[0]), q.map(|q| q[1]), size, size) else { continue };
             raster.each(|x, y, b| {
@@ -53,7 +62,12 @@ impl Shadows {
                 if d <= s.depth[idx] {
                     return;
                 }
-                if let Some(tx) = cut {
+                if let (Some(g), Some(p)) = (ground, &t.ground)
+                    && !g.keeps([0, 1, 2].map(|k| b[0] * p[0][k] + b[1] * p[1][k] + b[2] * p[2][k]))
+                {
+                    return;
+                }
+                if let Some(tx) = cutout {
                     let (u, v) = (
                         b[0] * t.uv[0][0] + b[1] * t.uv[1][0] + b[2] * t.uv[2][0],
                         b[0] * t.uv[0][1] + b[1] * t.uv[1][1] + b[2] * t.uv[2][1],

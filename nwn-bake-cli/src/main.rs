@@ -543,8 +543,9 @@ struct AreaIsoArgs {
     /// Shadows from the sun
     #[arg(long, value_name = "on|off", default_value = "on", value_parser = parse_on_off, action = clap::ArgAction::Set)]
     shadows: bool,
-    /// The roof: auto (interiors and underground areas cut open over their floor), keep, or metres over the floor
-    #[arg(long, value_name = "auto|keep|METRES", default_value = "auto", value_parser = parse_roof, allow_negative_numbers = true)]
+    /// The roof: auto (interiors and underground areas cut open over their floor), keep, metres over the floor (one height for the
+    /// whole area), or ground:METRES (everything more than METRES over the ground under it, so raised ground keeps its ground)
+    #[arg(long, value_name = "auto|keep|METRES|ground:METRES", default_value = "auto", value_parser = parse_roof, allow_negative_numbers = true)]
     roof: nwn_bake::iso::Roof,
     /// Dark areas lifted (auto) or not (off)
     #[arg(long, value_name = "auto|off", default_value = "auto", value_parser = parse_exposure, action = clap::ArgAction::Set)]
@@ -627,12 +628,7 @@ fn parse_light(v: &str) -> Result<nwn_bake::iso::Light, String> {
 }
 
 fn parse_roof(v: &str) -> Result<nwn_bake::iso::Roof, String> {
-    use nwn_bake::iso::Roof;
-    match v {
-        "auto" => Ok(Roof::Auto),
-        "keep" => Ok(Roof::Keep),
-        m => m.parse().ok().filter(|m: &f32| m.is_finite()).map(Roof::Over).ok_or_else(|| "auto, keep or metres over the floor".into()),
-    }
+    nwn_bake::iso::Roof::parse(v).map_err(|e| e.to_string())
 }
 
 fn parse_exposure(v: &str) -> Result<bool, String> {
@@ -1399,6 +1395,7 @@ mod tests {
             &["area-iso", "m.mod", "a", "--out", "o", "--quality", "2"],
             &["area-iso", "m.mod", "a", "--out", "o", "--region", "1,2,3,4,5"],
             &["area-iso", "m.mod", "a", "--out", "o", "--mark", "1"],
+            &["area-iso", "m.mod", "a", "--out", "o", "--roof", "ground:high"],
             &["area-3d", "m.mod", "a", "--out", "o", "--quality", "101"],
             &["area-3d", "m.mod", "a", "--out", "o", "--jobs", "0"],
         ] {
@@ -1409,6 +1406,7 @@ mod tests {
         assert!(parse(&["scene", "-", "b.png", "--items", "uti", "--strict-items"]).is_ok());
         assert!(parse(&["scene", "a.json"]).is_err(), "a scene needs its PNG");
         assert!(parse(&["area-iso", "m.mod", "a", "--out", "o", "--views", "all,top", "--roof", "-2"]).is_ok());
+        assert!(parse(&["area-iso", "m.mod", "a", "--out", "o", "--roof", "ground:2"]).is_ok());
         let Cmd::AreaIso(a) =
             parse(&["area-iso", "m.mod", "a", "--out", "o", "--region", "-5,-5,10,10", "--mark", "-1,2", "--mark", "3,4,#00ff00"])
                 .unwrap()
