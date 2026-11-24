@@ -51,8 +51,11 @@ impl Camera {
         let el = look.elevation_deg.to_radians();
         let (sin_c, cos_c) = (el.sin(), el.cos());
         let corner = [-cos_c * R2, -cos_c * R2, sin_c];
-        // (From the camera's side and a little left; the top view is lit as the south-west one.)
-        let light = norm([corner[0] - look.light_side, corner[1] + look.light_side, corner[2] + look.light_up]);
+        // (From the camera's side and a little left; the top view is lit as the south-west one. A sun is turned with the scene.)
+        let light = match look.sun {
+            Some(sun) => norm((0..view.turns()).fold(sun, |p, _| quarter(p))),
+            None => norm([corner[0] - look.light_side, corner[1] + look.light_side, corner[2] + look.light_up]),
+        };
         match view {
             View::Top => {
                 Camera { view, turns: 0, diagonal: false, elevation_deg: 90.0, sin_e: 1.0, cos_e: 0.0, cam: [0.0, 0.0, 1.0], light }
@@ -195,7 +198,10 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
             })
             .collect()
     });
-    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), l, scale, look, look.alpha_cut, cut));
+    // (Shadows `shadow_length` times as long as the light casts them: cast from a sun as much higher, the same way round.)
+    let k = if look.shadow_length > 0.0 { look.shadow_length } else { 1.0 };
+    let shadow_light = [l[0] * k, l[1] * k, l[2]];
+    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), shadow_light, scale, look, look.alpha_cut, cut));
     drop(casters);
     let bias = shadows.as_ref().map_or(look.shadow_bias, |s| look.shadow_bias.max(2.0 * s.cell));
     let project = |p: [f32; 3]| camera.project(p, scale);

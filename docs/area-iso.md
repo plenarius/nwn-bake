@@ -28,13 +28,21 @@ background. `--format png` writes PNG (RGB with `--background #rrggbb`, else RGB
 `--view all` is the four corners. Every view is drawn at the same scale (`--scale`, pixels a metre). The light is set relative to the
 camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 
+`--sun` lights every view from one direction in game axes instead, as the game does: `--sun game` is the game's own, towards
+(4000, 4500, 7000), from the north-east about 49 degrees up, so shadows fall to the south-west as they do in the game. A minimap
+drawn from the top view then matches the area as players see it. `--shadow-length <factor>` makes every shadow that many times
+as long, as if cast by a sun that much higher, the same way round; the faces stay lit by the sun as it is. In the game's sun a 10 m
+tower casts a shadow 8.6 m long, over most of the next tile; with `--shadow-length 0.4` it is 3.4 m long, and a 2 m fence's is
+0.7 m, which still marks the fence on a minimap. Both are part of the look (`sun`, `shadow_length`), so the manifest writes the
+whole look and the keys change with them.
+
 ## Example
 
 ```json
 {
   "format": "nwn-bake/area-iso",
   "version": 1,
-  "renderer": { "name": "nwn-bake", "version": "0.6.1", "commit": "abc1234", "pictures": 1 },
+  "renderer": { "name": "nwn-bake", "version": "0.7.0", "commit": "abc1234", "pictures": 1 },
   "area": { "resref": "village", "name": "The Village", "tileset": "ttr01", "tiles": [8, 8], "size_m": [80.0, 80.0], "kind": "surface" },
   "inputs": { "are": "sha256:...", "git": "sha256:...", "haks": ["hak_a", "hak_b"], "missing_haks": [], "tlk": "mytlk" },
   "resources": null,

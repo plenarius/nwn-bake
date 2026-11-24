@@ -116,10 +116,14 @@ impl View {
 pub struct Look {
     /// The corner views' camera: degrees above the horizon.
     pub elevation_deg: f32,
-    /// How far to the camera's left the light comes from: part of a unit vector, added to the direction towards the camera.
+    /// How far to the camera's left the light comes from: part of a unit vector, added to the direction towards the camera. Not
+    /// used with `sun`.
     pub light_side: f32,
     /// How far above the camera the light comes from, as `light_side`.
     pub light_up: f32,
+    /// Towards the sun in game axes (x east, y north, z up; any length), the same in every view, as the game lights an area from
+    /// one direction ([`GAME_SUN`]); None for the light of `light_side` and `light_up`, which follows the camera.
+    pub sun: Option<[f32; 3]>,
     /// Plain daylight (`--light day`): the ambient colour, 0..1.
     pub day_ambient: [f32; 3],
     /// Plain daylight: the sun's colour, 0..1.
@@ -142,6 +146,10 @@ pub struct Look {
     /// How far (metres) a surface may be behind the nearest one the sun sees and still be lit; two cells of the shadow map where
     /// that is more.
     pub shadow_bias: f32,
+    /// How long shadows are, times the length the light casts them (1): 0.5 casts them from a sun as much higher, the same way
+    /// round, so a tower's shadow stays near its foot and a fence's still shows; the faces are lit by the light as it is. 0 or less
+    /// counts as 1.
+    pub shadow_length: f32,
     /// Exposure: the brightest 2% of what is drawn is lifted to about this (0..255 luminance), by at most `exposure_max` times, more
     /// where it is dark: a pixel at v is multiplied by 1 + (gain - 1) * (1 - v/255)^`exposure_lift`.
     pub exposure_target: f32,
@@ -181,6 +189,7 @@ impl Default for Look {
             elevation_deg: 30.0,
             light_side: 0.35,
             light_up: 0.3,
+            sun: None,
             day_ambient: [0.24; 3],
             day_diffuse: [0.67; 3],
             ambient: 0.8,
@@ -191,6 +200,7 @@ impl Default for Look {
             shadow_size: 4096,
             shadow_min_size: 1024,
             shadow_bias: 0.12,
+            shadow_length: 1.0,
             exposure_target: 200.0,
             exposure_lift: 1.0,
             exposure_max: 6.0,
@@ -204,6 +214,23 @@ impl Default for Look {
             alpha_cut: 90.0,
             padding: 8.0,
         }
+    }
+}
+
+/// Towards the sun the game lights every area from, sun and moon alike, in game axes (x east, y north, z up): from the north-east,
+/// about 49 degrees up, so shadows fall to the south-west. For [`Look::sun`].
+pub const GAME_SUN: [f32; 3] = [4000.0, 4500.0, 7000.0];
+
+/// A sun as `--sun` writes it: `game` ([`GAME_SUN`]) or `x,y,z` in game axes, not all 0.
+pub fn parse_sun(s: &str) -> Result<[f32; 3]> {
+    if s.trim() == "game" {
+        return Ok(GAME_SUN);
+    }
+    let v: Vec<f32> =
+        s.split(',').map(|c| c.trim().parse::<f32>().ok().filter(|c| c.is_finite())).collect::<Option<_>>().unwrap_or_default();
+    match v[..] {
+        [x, y, z] if x != 0.0 || y != 0.0 || z != 0.0 => Ok([x, y, z]),
+        _ => anyhow::bail!("sun: game or x,y,z towards the sun (game axes), as 4000,4500,7000"),
     }
 }
 
