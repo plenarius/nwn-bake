@@ -198,7 +198,10 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
             })
             .collect()
     });
-    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), l, scale, look, look.alpha_cut, cut));
+    // (Shadows `shadow_length` times as long as the light casts them: cast from a sun as much higher, the same way round.)
+    let k = if look.shadow_length > 0.0 { look.shadow_length } else { 1.0 };
+    let shadow_light = [l[0] * k, l[1] * k, l[2]];
+    let shadows = o.shadows.then(|| Shadows::new(casters.as_deref().unwrap_or(&tris), shadow_light, scale, look, look.alpha_cut, cut));
     drop(casters);
     let bias = shadows.as_ref().map_or(look.shadow_bias, |s| look.shadow_bias.max(2.0 * s.cell));
     let project = |p: [f32; 3]| camera.project(p, scale);
@@ -284,7 +287,7 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
                 }
                 // The sun reaches it unless something is between: its position, looked up in the shadow map.
                 let lit = match &shadows {
-                    Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias, look.shadow_reach),
+                    Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias),
                     _ => 1.0,
                 };
                 let light = [0, 1, 2].map(|k| (amb[k] + dif[k] * ndl * lit).min(look.light_max));

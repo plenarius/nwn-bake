@@ -146,9 +146,10 @@ pub struct Look {
     /// How far (metres) a surface may be behind the nearest one the sun sees and still be lit; two cells of the shadow map where
     /// that is more.
     pub shadow_bias: f32,
-    /// How far a shadow reaches, metres along the light: it fades from full where it is cast to none this far from what casts it,
-    /// so a tower's shadow stays at its foot and a fence's still shows; 0 or less for no limit.
-    pub shadow_reach: f32,
+    /// How long shadows are, times the length the light casts them (1): 0.5 casts them from a sun as much higher, the same way
+    /// round, so a tower's shadow stays near its foot and a fence's still shows; the faces are lit by the light as it is. 0 or less
+    /// counts as 1.
+    pub shadow_length: f32,
     /// Exposure: the brightest 2% of what is drawn is lifted to about this (0..255 luminance), by at most `exposure_max` times, more
     /// where it is dark: a pixel at v is multiplied by 1 + (gain - 1) * (1 - v/255)^`exposure_lift`.
     pub exposure_target: f32,
@@ -199,7 +200,7 @@ impl Default for Look {
             shadow_size: 4096,
             shadow_min_size: 1024,
             shadow_bias: 0.12,
-            shadow_reach: 0.0,
+            shadow_length: 1.0,
             exposure_target: 200.0,
             exposure_lift: 1.0,
             exposure_max: 6.0,

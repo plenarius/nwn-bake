@@ -30,9 +30,11 @@ camera, so the four corner views are lit alike; the top view is lit as `sw` is.
 
 `--sun` lights every view from one direction in game axes instead, as the game does: `--sun game` is the game's own, towards
 (4000, 4500, 7000), from the north-east about 49 degrees up, so shadows fall to the south-west as they do in the game. A minimap
-drawn from the top view then matches the area as players see it. `--shadow-reach <metres>` fades each shadow out over that many
-metres along the light from what casts it: with 3, a fence's shadow shows at its foot and a 10 m tower's does not cover the next
-tile. Both are part of the look (`sun`, `shadow_reach`), so the manifest writes the whole look and the keys change with them.
+drawn from the top view then matches the area as players see it. `--shadow-length <factor>` makes every shadow that many times
+as long, as if cast by a sun that much higher, the same way round; the faces stay lit by the sun as it is. In the game's sun a 10 m
+tower casts a shadow 8.6 m long, over most of the next tile; with `--shadow-length 0.4` it is 3.4 m long, and a 2 m fence's is
+0.7 m, which still marks the fence on a minimap. Both are part of the look (`sun`, `shadow_length`), so the manifest writes the
+whole look and the keys change with them.
 
 ## Example
 

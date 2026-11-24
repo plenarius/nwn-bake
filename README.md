@@ -107,7 +107,7 @@ line per area and view) and `index.json`.
 | `--light day\|area` | `day` | Plain daylight, or the area's own sun colours |
 | `--shadows on\|off` | `on` | |
 | `--sun game\|X,Y,Z` | from the camera's side | Towards the sun in game axes, the same in every view; `game` is the game's own (shadows fall south-west) ([Views](docs/area-iso.md#views)) |
-| `--shadow-reach <metres>` | 0 (no limit) | Each shadow fades out over this many metres along the light |
+| `--shadow-length <factor>` | 1 | Shadows this many times as long as the light casts them, the same way round (`0.5`: half as long) |
 | `--roof auto\|keep\|<metres>\|ground:<metres>` | `auto` | Interiors and underground areas are cut open over their floor; `keep` never cuts; metres cut every area at one height over its floor; `ground:2` cuts what is more than 2 m over the ground under it, so raised ground keeps its ground ([Following the ground](docs/area-iso.md#following-the-ground)) |
 | `--exposure auto\|off` | `auto` | Dark areas lifted |
 | `--objects on\|off` | `on` | Placeables and doors |

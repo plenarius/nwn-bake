@@ -10,8 +10,9 @@ version (`PICTURES_VERSION`), which changes whenever a picture would.
   towards (4000, 4500, 7000) (`nwn_bake::iso::GAME_SUN`), so shadows fall to the south-west as in the game, not east as the
   camera's light casts them in the top view. For a minimap drawn from the top view. `Look::sun` in the library and in a `--look`
   file.
-- **`area-iso --shadow-reach <metres>`: shorter shadows.** A shadow fades from full where it is cast to none that many metres
-  along the light from what casts it, so a thin wall still shows and a tower's shadow stays off the next tile. `Look::shadow_reach`.
+- **`area-iso --shadow-length <factor>`: shorter shadows.** Shadows are drawn that many times as long, as if cast by a sun as
+  much higher, the same way round, while the faces stay lit by the sun as it is: with 0.4 a 10 m tower's shadow in the game's sun
+  is 3.4 m long, not 8.6 m, and a 2 m fence's still shows. `Look::shadow_length`.
 - Both are fields of `nwn_bake::iso::Look`, which code that builds a `Look` without `..Look::default()` must add (hence 0.7.0).
   Their defaults draw as before: `PICTURES_VERSION`, the pictures and the keys are unchanged unless they are set.
 

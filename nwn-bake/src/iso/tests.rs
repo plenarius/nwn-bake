@@ -528,16 +528,25 @@ fn a_sun_casts_the_same_shadow_in_every_view() {
 }
 
 #[test]
-fn a_shadow_fades_out_within_its_reach() {
-    // The square is 4 m from its shadow along the light: a reach of 1 m leaves no shadow, 8 m half of one.
+fn a_shadow_length_shortens_the_shadow_the_same_way_round() {
+    // A square 3 m up: in the game's sun its shadow is 2.6 m south-west of it; with a shadow length of 0.5, 1.3 m.
     let s = scene(&[[10.0, 10.0, 3.0]], 0);
-    let darkest = |reach: f32| {
-        let look = Look { sun: Some(GAME_SUN), shadow_reach: reach, ..Look::default() };
-        shadow(&render(&s, &IsoOptions { shadows: true, look, ..plain(vec![View::Top]) }).unwrap().pictures[0]).map(|s| s.1)
+    let at = |k: f32| [10.0 - k * 3.0 * GAME_SUN[0] / GAME_SUN[2], 10.0 - k * 3.0 * GAME_SUN[1] / GAME_SUN[2], 0.0];
+    for (k, view) in [(0.5, View::Top), (0.5, View::Ne), (1.0, View::Top)] {
+        let look = Look { sun: Some(GAME_SUN), shadow_length: k, ..Look::default() };
+        let p = &render(&s, &IsoOptions { shadows: true, look, ..plain(vec![view]) }).unwrap().pictures[0];
+        let (got, _) = shadow(p).unwrap_or_else(|| panic!("{view:?}, length {k}: no shadow"));
+        let want = p.transform.project(at(k));
+        let off = ((got[0] - want[0]).powi(2) + (got[1] - want[1]).powi(2)).sqrt();
+        assert!(off < 3.0, "{view:?}, length {k}: the shadow is at {got:?}, not {want:?} ({off:.1} px off)");
+    }
+    // The faces are lit as before: the ground away from the shadow is as bright.
+    let bright = |k: f32| {
+        let look = Look { sun: Some(GAME_SUN), shadow_length: k, ..Look::default() };
+        let p = &render(&s, &IsoOptions { shadows: true, look, ..plain(vec![View::Top]) }).unwrap().pictures[0];
+        top_pixel(p, 18.0, 18.0)
     };
-    let (full, half) = (darkest(0.0).unwrap(), darkest(8.0).unwrap());
-    assert!(full < half, "a shadow within its reach is lighter: {full} against {half}");
-    assert_eq!(darkest(1.0), None, "a shadow past its reach is gone");
+    assert_eq!(bright(0.5), bright(1.0));
 }
 
 #[test]
@@ -547,6 +556,6 @@ fn the_sun_parses_as_game_or_three_numbers() {
     for bad in ["", "1,2", "1,2,3,4", "0,0,0", "a,b,c", "nan,1,1"] {
         assert!(parse_sun(bad).is_err(), "{bad:?}");
     }
-    let look: Look = serde_json::from_str(r#"{"sun": [4000, 4500, 7000], "shadow_reach": 3}"#).unwrap();
-    assert_eq!(look, Look { sun: Some(GAME_SUN), shadow_reach: 3.0, ..Look::default() });
+    let look: Look = serde_json::from_str(r#"{"sun": [4000, 4500, 7000], "shadow_length": 0.5}"#).unwrap();
+    assert_eq!(look, Look { sun: Some(GAME_SUN), shadow_length: 0.5, ..Look::default() });
 }
