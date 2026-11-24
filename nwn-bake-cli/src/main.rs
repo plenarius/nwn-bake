@@ -543,6 +543,13 @@ struct AreaIsoArgs {
     /// Shadows from the sun
     #[arg(long, value_name = "on|off", default_value = "on", value_parser = parse_on_off, action = clap::ArgAction::Set)]
     shadows: bool,
+    /// Towards the sun, the same in every view: game (the game's own, from the north-east, so shadows fall south-west) or X,Y,Z in
+    /// game axes [default: from the camera's side, a little left]
+    #[arg(long, value_name = "game|X,Y,Z", value_parser = parse_sun, allow_hyphen_values = true)]
+    sun: Option<[f32; 3]>,
+    /// How far a shadow reaches, metres along the light, fading out on the way; 0 for no limit
+    #[arg(long, value_name = "METRES", value_parser = parse_reach)]
+    shadow_reach: Option<f32>,
     /// The roof: auto (interiors and underground areas cut open over their floor), keep, metres over the floor (one height for the
     /// whole area), or ground:METRES (everything more than METRES over the ground under it, so raised ground keeps its ground)
     #[arg(long, value_name = "auto|keep|METRES|ground:METRES", default_value = "auto", value_parser = parse_roof, allow_negative_numbers = true)]
@@ -605,6 +612,14 @@ fn parse_views(v: &str) -> Result<Views, String> {
 
 fn parse_scale(v: &str) -> Result<f32, String> {
     v.parse().ok().filter(|s: &f32| s.is_finite() && *s > 0.0).ok_or_else(|| "pixels a metre, more than 0".into())
+}
+
+fn parse_sun(v: &str) -> Result<[f32; 3], String> {
+    nwn_bake::iso::parse_sun(v).map_err(|e| format!("{e:#}"))
+}
+
+fn parse_reach(v: &str) -> Result<f32, String> {
+    v.parse().ok().filter(|m: &f32| m.is_finite() && *m >= 0.0).ok_or_else(|| "metres, 0 or more".into())
 }
 
 fn parse_format(v: &str) -> Result<nwn_bake::iso::Format, String> {
@@ -1196,6 +1211,13 @@ fn area_iso(a: AreaIsoArgs) -> Result<usize> {
     if let Some(look) = &a.look {
         o.look = serde_json::from_slice(&read(look)?).with_context(|| format!("{}: not a look", look.display()))?;
     }
+    // (Over the look file's: they are part of the look, so the manifest and the keys have them.)
+    if a.sun.is_some() {
+        o.look.sun = a.sun;
+    }
+    if let Some(r) = a.shadow_reach {
+        o.look.shadow_reach = r;
+    }
     let format = a.format.unwrap_or_else(Format::best);
     // (A batch writes a folder per kind and view; named areas side by side.)
     let all = a.areas.all;
@@ -1396,6 +1418,8 @@ mod tests {
             &["area-iso", "m.mod", "a", "--out", "o", "--region", "1,2,3,4,5"],
             &["area-iso", "m.mod", "a", "--out", "o", "--mark", "1"],
             &["area-iso", "m.mod", "a", "--out", "o", "--roof", "ground:high"],
+            &["area-iso", "m.mod", "a", "--out", "o", "--sun", "1,2"],
+            &["area-iso", "m.mod", "a", "--out", "o", "--shadow-reach", "-1"],
             &["area-3d", "m.mod", "a", "--out", "o", "--quality", "101"],
             &["area-3d", "m.mod", "a", "--out", "o", "--jobs", "0"],
         ] {
@@ -1407,6 +1431,11 @@ mod tests {
         assert!(parse(&["scene", "a.json"]).is_err(), "a scene needs its PNG");
         assert!(parse(&["area-iso", "m.mod", "a", "--out", "o", "--views", "all,top", "--roof", "-2"]).is_ok());
         assert!(parse(&["area-iso", "m.mod", "a", "--out", "o", "--roof", "ground:2"]).is_ok());
+        let Cmd::AreaIso(a) = parse(&["area-iso", "m.mod", "a", "--out", "o", "--sun", "-1,2,3", "--shadow-reach", "3"]).unwrap().command
+        else {
+            panic!("not area-iso")
+        };
+        assert_eq!((a.sun, a.shadow_reach), (Some([-1.0, 2.0, 3.0]), Some(3.0)), "a sun from the west is numbers");
         let Cmd::AreaIso(a) =
             parse(&["area-iso", "m.mod", "a", "--out", "o", "--region", "-5,-5,10,10", "--mark", "-1,2", "--mark", "3,4,#00ff00"])
                 .unwrap()

@@ -51,8 +51,11 @@ impl Camera {
         let el = look.elevation_deg.to_radians();
         let (sin_c, cos_c) = (el.sin(), el.cos());
         let corner = [-cos_c * R2, -cos_c * R2, sin_c];
-        // (From the camera's side and a little left; the top view is lit as the south-west one.)
-        let light = norm([corner[0] - look.light_side, corner[1] + look.light_side, corner[2] + look.light_up]);
+        // (From the camera's side and a little left; the top view is lit as the south-west one. A sun is turned with the scene.)
+        let light = match look.sun {
+            Some(sun) => norm((0..view.turns()).fold(sun, |p, _| quarter(p))),
+            None => norm([corner[0] - look.light_side, corner[1] + look.light_side, corner[2] + look.light_up]),
+        };
         match view {
             View::Top => {
                 Camera { view, turns: 0, diagonal: false, elevation_deg: 90.0, sin_e: 1.0, cos_e: 0.0, cam: [0.0, 0.0, 1.0], light }
@@ -281,7 +284,7 @@ pub(super) fn draw(prep: &Prepared, camera: Camera, notes: &mut Vec<String>) -> 
                 }
                 // The sun reaches it unless something is between: its position, looked up in the shadow map.
                 let lit = match &shadows {
-                    Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias),
+                    Some(s) if ndl > 0.0 => s.lit(interpolate(&t.p, b), bias, look.shadow_reach),
                     _ => 1.0,
                 };
                 let light = [0, 1, 2].map(|k| (amb[k] + dif[k] * ndl * lit).min(look.light_max));

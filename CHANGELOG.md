@@ -4,6 +4,17 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.7.0 (2026-11-23)
+
+- **`area-iso --sun game|X,Y,Z`: one sun for every view, in game axes.** `game` is the direction the game lights every area from,
+  towards (4000, 4500, 7000) (`nwn_bake::iso::GAME_SUN`), so shadows fall to the south-west as in the game, not east as the
+  camera's light casts them in the top view. For a minimap drawn from the top view. `Look::sun` in the library and in a `--look`
+  file.
+- **`area-iso --shadow-reach <metres>`: shorter shadows.** A shadow fades from full where it is cast to none that many metres
+  along the light from what casts it, so a thin wall still shows and a tower's shadow stays off the next tile. `Look::shadow_reach`.
+- Both are fields of `nwn_bake::iso::Look`, which code that builds a `Look` without `..Look::default()` must add (hence 0.7.0).
+  Their defaults draw as before: `PICTURES_VERSION`, the pictures and the keys are unchanged unless they are set.
+
 ## 0.6.1 (2026-11-19)
 
 - **`STYLE.md`: the area editor's repositories are named `plenarius/nwn-landscaper` and `plenarius/nwn-landscaper-web`**, the

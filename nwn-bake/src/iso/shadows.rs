@@ -89,21 +89,25 @@ impl Shadows {
         [half + dot(d, self.u) / self.radius * half, half + dot(d, self.v) / self.radius * half, dot(d, self.w)]
     }
 
-    /// How much of the sun reaches the point (0 in shadow to 1 lit), averaged over the neighbouring cells so edges are soft.
-    pub(super) fn lit(&self, p: [f32; 3], bias: f32) -> f32 {
+    /// How much of the sun reaches the point (0 in shadow to 1 lit), averaged over the neighbouring cells so edges are soft; with a
+    /// `reach` over 0, a shadow fades out over that many metres from what casts it ([`Look::shadow_reach`]).
+    pub(super) fn lit(&self, p: [f32; 3], bias: f32, reach: f32) -> f32 {
         let q = self.to_light(p);
         let (cx, cy) = (q[0].round() as i64, q[1].round() as i64);
         let mut lit = 0.0;
         for dy in -1..=1i64 {
             for dx in -1..=1i64 {
                 let (x, y) = (cx + dx, cy + dy);
-                if x < 0
-                    || y < 0
-                    || x >= self.size as i64
-                    || y >= self.size as i64
-                    || q[2] >= self.depth[y as usize * self.size + x as usize] - bias
-                {
+                if x < 0 || y < 0 || x >= self.size as i64 || y >= self.size as i64 {
                     lit += 1.0;
+                    continue;
+                }
+                // (How far the point is behind what the sun sees, along the light: the shadow's length there.)
+                let behind = self.depth[y as usize * self.size + x as usize] - q[2];
+                if behind <= bias {
+                    lit += 1.0;
+                } else if reach > 0.0 {
+                    lit += (behind / reach).min(1.0);
                 }
             }
         }

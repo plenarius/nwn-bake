@@ -489,3 +489,64 @@ fn deep_water_is_kept_with_the_roof_cut_along_the_ground() {
     assert_eq!(hue(top_pixel(p, 3.0, 7.0)), 'r');
     assert_eq!(top_pixel(p, 7.0, 3.0), top_pixel(p, 5.0, 5.0), "the branch is cut and the water shows");
 }
+
+/// Where a picture is darker than its sunlit blue ground (the red marker apart): the shadows' centroid, and the darkest of them.
+fn shadow(p: &Picture) -> Option<([f32; 2], u8)> {
+    let px = |i: usize| &p.rgba[i * 4..][..4];
+    let blues = (0..(p.width * p.height) as usize).map(px).filter(|c| c[3] == 255 && c[0] == 0);
+    let lit = blues.clone().map(|c| c[2]).max()?;
+    let (mut sx, mut sy, mut n, mut darkest) = (0.0f64, 0.0f64, 0.0f64, lit);
+    for y in 0..p.height as usize {
+        for x in 0..p.width as usize {
+            let c = px(y * p.width as usize + x);
+            if c[3] == 255 && c[0] == 0 && c[2] + 8 < lit {
+                (sx, sy, n, darkest) = (sx + x as f64 + 0.5, sy + y as f64 + 0.5, n + 1.0, darkest.min(c[2]));
+            }
+        }
+    }
+    (n > 0.0).then(|| ([(sx / n) as f32, (sy / n) as f32], darkest))
+}
+
+#[test]
+fn a_sun_casts_the_same_shadow_in_every_view() {
+    // A 1 m square 3 m up: in the game's sun (49 degrees up, from the north-east) its shadow is 2.6 m to its south-west.
+    let s = scene(&[[10.0, 10.0, 3.0]], 0);
+    let sun = GAME_SUN;
+    let n = (sun[0] * sun[0] + sun[1] * sun[1] + sun[2] * sun[2]).sqrt();
+    assert!(((sun[2] / n).asin().to_degrees() - 49.3).abs() < 0.1);
+    let at = [10.0 - 3.0 * sun[0] / sun[2], 10.0 - 3.0 * sun[1] / sun[2], 0.0];
+    let o = IsoOptions { shadows: true, look: Look { sun: Some(sun), ..Look::default() }, ..plain(ALL.to_vec()) };
+    for p in &render(&s, &o).unwrap().pictures {
+        let (got, _) = shadow(p).unwrap_or_else(|| panic!("{:?}: no shadow", p.view));
+        let want = p.transform.project(at);
+        let off = ((got[0] - want[0]).powi(2) + (got[1] - want[1]).powi(2)).sqrt();
+        assert!(off < 3.0, "{:?}: the shadow is at {got:?}, the sun puts it at {want:?} ({off:.1} px off)", p.view);
+    }
+    // Without a sun, the light follows the camera: the top view's shadow falls east, the other way.
+    let p = &render(&s, &IsoOptions { shadows: true, ..plain(vec![View::Top]) }).unwrap().pictures[0];
+    assert!(shadow(p).unwrap().0[0] > p.transform.project([10.0, 10.0, 0.0])[0] + 8.0, "the default light's shadow falls east");
+}
+
+#[test]
+fn a_shadow_fades_out_within_its_reach() {
+    // The square is 4 m from its shadow along the light: a reach of 1 m leaves no shadow, 8 m half of one.
+    let s = scene(&[[10.0, 10.0, 3.0]], 0);
+    let darkest = |reach: f32| {
+        let look = Look { sun: Some(GAME_SUN), shadow_reach: reach, ..Look::default() };
+        shadow(&render(&s, &IsoOptions { shadows: true, look, ..plain(vec![View::Top]) }).unwrap().pictures[0]).map(|s| s.1)
+    };
+    let (full, half) = (darkest(0.0).unwrap(), darkest(8.0).unwrap());
+    assert!(full < half, "a shadow within its reach is lighter: {full} against {half}");
+    assert_eq!(darkest(1.0), None, "a shadow past its reach is gone");
+}
+
+#[test]
+fn the_sun_parses_as_game_or_three_numbers() {
+    assert_eq!(parse_sun("game").unwrap(), GAME_SUN);
+    assert_eq!(parse_sun("1, -2,3.5").unwrap(), [1.0, -2.0, 3.5]);
+    for bad in ["", "1,2", "1,2,3,4", "0,0,0", "a,b,c", "nan,1,1"] {
+        assert!(parse_sun(bad).is_err(), "{bad:?}");
+    }
+    let look: Look = serde_json::from_str(r#"{"sun": [4000, 4500, 7000], "shadow_reach": 3}"#).unwrap();
+    assert_eq!(look, Look { sun: Some(GAME_SUN), shadow_reach: 3.0, ..Look::default() });
+}
