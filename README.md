@@ -37,7 +37,8 @@ it against `SHA256SUMS`.
 
 - **macOS:** the binary is signed with a Developer ID and notarized by Apple, from the first release after 0.7.0. macOS stops an
   older, unsigned one the first time; clear the quarantine flag: `xattr -d com.apple.quarantine ./nwn-bake`.
-- **Windows:** the binary is not signed yet. SmartScreen may warn about an unknown publisher: "More info", then "Run anyway".
+- **Windows:** the binary is Authenticode-signed, from the first release after 0.7.0. SmartScreen may warn about an older,
+  unsigned one (unknown publisher): "More info", then "Run anyway".
 
 Or build it (Rust 1.98 or newer, a C and C++ compiler, git; about 10 minutes the first time):
 
