@@ -824,6 +824,10 @@ pub fn write(
 fn encode_all(scene: &Scene, used: &[u32], o: &Options, tex: &TextureFiles) -> Vec<Option<Result<TexFile>>> {
     let images: Vec<Option<Arc<Mipped>>> = used.iter().map(|&id| scene.textures[id as usize].image.clone()).collect();
     let next = std::sync::atomic::AtomicUsize::new(0);
+    // The browser build (WASI) has no threads: in turn.
+    if cfg!(target_family = "wasm") {
+        return images.iter().map(|m| m.as_ref().map(|m| tex.file(m, o.max_tex, o.quality))).collect();
+    }
     let slots: Vec<Mutex<Option<Result<TexFile>>>> = images.iter().map(|_| Mutex::new(None)).collect();
     std::thread::scope(|s| {
         for _ in 0..o.threads.clamp(1, 16).min(images.len().max(1)) {

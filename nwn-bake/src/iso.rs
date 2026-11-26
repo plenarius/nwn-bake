@@ -427,6 +427,11 @@ pub struct Rendered {
 /// Draws `scene` as `o` says: one picture per view, each view on a thread of its own.
 pub fn render(scene: &Scene, o: &IsoOptions) -> Result<Rendered> {
     let prepared = prepare(scene, o)?;
+    // The browser build (WASI) has no threads: in turn.
+    if cfg!(target_family = "wasm") {
+        let drawn = o.views.iter().map(|&v| prepared.draw(v)).collect();
+        return Ok(prepared.assemble(drawn));
+    }
     let drawn: Vec<Drawn> = std::thread::scope(|scope| {
         let prepared = &prepared;
         let handles: Vec<_> = o.views.iter().map(|&v| scope.spawn(move || prepared.draw(v))).collect();

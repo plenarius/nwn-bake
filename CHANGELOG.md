@@ -4,6 +4,12 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## Unreleased
+
+- **Builds for WASI.** The texture decoding and encoding of scenes and area bakes, and the views of `area-iso`, run in turn when
+  built for WebAssembly (`wasm32-wasip1`), which has no threads: the Landscaper's browser build bakes with them. Native builds
+  are unchanged.
+
 ## 0.7.1 (2026-11-25)
 
 - **The release binaries are signed.** The macOS binary is signed with a Developer ID and notarized by Apple (#17), and the
