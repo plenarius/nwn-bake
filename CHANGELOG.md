@@ -4,6 +4,12 @@ All notable changes to nwn-bake. Versions follow [Semantic Versioning](https://s
 change the library's API. The area manifest has its own version (`docs/area-iso.md`), and the cache keys hold the pictures'
 version (`PICTURES_VERSION`), which changes whenever a picture would.
 
+## 0.7.1 (2026-11-25)
+
+- **The release binaries are signed.** The macOS binary is signed with a Developer ID and notarized by Apple (#17), and the
+  Windows binary is Authenticode-signed as ORTH DOT CA Corp (#18): macOS opens it without clearing the quarantine flag, and
+  Windows names its publisher. No code changes; the binaries are as in 0.7.0 apart from the version.
+
 ## 0.7.0 (2026-11-23)
 
 - **`area-iso --sun game|X,Y,Z`: one sun for every view, in game axes.** `game` is the direction the game lights every area from,
