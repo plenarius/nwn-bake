@@ -42,7 +42,7 @@ whole look and the keys change with them.
 {
   "format": "nwn-bake/area-iso",
   "version": 1,
-  "renderer": { "name": "nwn-bake", "version": "0.7.0", "commit": "abc1234", "pictures": 1 },
+  "renderer": { "name": "nwn-bake", "version": "0.7.1", "commit": "abc1234", "pictures": 1 },
   "area": { "resref": "village", "name": "The Village", "tileset": "ttr01", "tiles": [8, 8], "size_m": [80.0, 80.0], "kind": "surface" },
   "inputs": { "are": "sha256:...", "git": "sha256:...", "haks": ["hak_a", "hak_b"], "missing_haks": [], "tlk": "mytlk" },
   "resources": null,
