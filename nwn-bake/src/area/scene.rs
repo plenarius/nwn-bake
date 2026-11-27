@@ -666,6 +666,10 @@ fn decode(game: &Game, names: &[String], threads: usize) -> Vec<Result<Arc<Mippe
     let threads = if threads == 0 { std::thread::available_parallelism().map_or(1, std::num::NonZero::get).clamp(1, 8) } else { threads };
     let threads = threads.min(names.len().max(1));
     let next = std::sync::atomic::AtomicUsize::new(0);
+    // The browser build (WASI) has no threads: in turn.
+    if cfg!(target_family = "wasm") {
+        return names.iter().map(|n| game.mipped(n)).collect();
+    }
     let slots: Vec<std::sync::Mutex<Option<Result<Arc<Mipped>>>>> = names.iter().map(|_| Default::default()).collect();
     std::thread::scope(|scope| {
         for _ in 0..threads {
