@@ -190,7 +190,13 @@ jobs:
         run: rustup toolchain install stable --profile minimal && rustup default stable
       - name: Third-party licences
         run: |
-          cargo install --locked cargo-about --version 0.9.3 --features cli
+          set -euo pipefail
+          cd "$RUNNER_TEMP"
+          curl -fsSL -o cargo-about.tgz https://github.com/EmbarkStudios/cargo-about/releases/download/0.9.3/cargo-about-0.9.3-x86_64-unknown-linux-musl.tar.gz
+          echo "3ad1e94ea1e63d69d1961f4fb15ccbbe9575d906111f96d2cb4dce6df48f71b4  cargo-about.tgz" | sha256sum -c
+          mkdir x && tar -xzf cargo-about.tgz -C x
+          install -m 755 "$(find x -type f -name cargo-about | head -n 1)" "$HOME/.cargo/bin/cargo-about"
+          cd "$GITHUB_WORKSPACE"
           # --fail: a crate whose licence cannot be shipped, or a clarification whose files changed (about.toml), stops the release.
           cargo about generate --workspace --all-features --fail --locked -o THIRD-PARTY-LICENSES.html about.hbs
       - name: Source with every dependency
